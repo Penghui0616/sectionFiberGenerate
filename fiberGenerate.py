@@ -15,26 +15,27 @@ import math
 ######################################################################################
 class PolygonSection():
 	"""
-	多边形截面纤维划分
+	实心，一个及两个空心的多边形截面纤维单元划分(保护层混凝土，核心混凝土及纵筋纤维）
 	"""
-	def __init__(self, fig,ax,outNode,outEle,inNode=None,inEle=None):
+	def __init__(self,ax,outNode,outEle,inNode=None,inEle=None):
 		"""
-		:param outNode:外部轮廓节点
-		:param outEle: 外部轮廓单元（逆时针）
-		:param inNode: 内部轮廓节点，每个轮廓是一个字典
-		:param inEle: 内部轮廓单元
+		初始化参数：
+		ax：图形轴
+		outNode:外部轮廓节点字典--outSideNode={1:(3.5,3),2:(1.5,5),3:(-1.5,5),4:(-3.5,3)}
+		outEle: 外部轮廓单元字典（逆时针）outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4,1)}
+		inNode: 内部轮廓节点列表，每个轮廓是一个字典inSideNode=[{1:(1.9,2.4),2:(1.1,3.2),3:(-1.1,3.2),4:(-1.9,2.4)}]
+		inEle: 内部轮廓单元列表--inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}]
 		"""
 		self.outNode=outNode
 		self.outEle=outEle
 		self.inNode=inNode
 		self.inEle=inEle
-		self.fig=fig
 		self.ax=ax
 		self.outNewNodeDict=None  #新生成的外侧保护层混凝土线节点字典
 		self.inNewNodeDict=None	  #新生成的内侧保护层混凝土线节点字典列表
 	def _lineNodeList(self,nodeDict,eleDict):
 		"""
-		返回每个线单元两端节点的X，Y坐标列表
+		返回每个线单元两端节点的X，Y坐标列表[([x1,x2],[y1,y2])]
 		"""
 		nEle=len(eleDict)
 		keysList=list(eleDict.keys())
@@ -51,7 +52,7 @@ class PolygonSection():
 
 	def sectPlot(self):
 		"""
-		未划分的初始截面绘制
+		绘制未划分纤维的截面轮廓
 		"""
 		###外部轮廓线绘制
 		lineList=self._lineNodeList(self.outNode, self.outEle)
@@ -68,9 +69,12 @@ class PolygonSection():
 	def _middleLineNode(self,nodeDict,d0,pos="outLine"):
 		"""
 		计算分界线各节点的列表
-		nodeDict-节点字典 {1:(2.3,4.3)}
-		d0-保护层厚度
-		pos-外侧分界线（"outLinee"),内侧分界线("inLine")
+		输入：
+			nodeDict:节点字典 {1:(2.3,4.3)}
+			d0:保护层厚度
+			pos:外侧分界线（"outLinee"),内侧分界线("inLine")
+		返回：
+			NodeList:外分界线节点列表[(x1,y1),(x2,y2),...,(xn,yn)]
 		"""
 		NodeKeys = list(nodeDict.keys())
 		NodeKeys.append(NodeKeys[0])
@@ -114,8 +118,11 @@ class PolygonSection():
 
 	def coverLinePlot(self,d0):
 		"""
-		通过轮廓线及保护层厚度计算核心混凝土与保护层混凝土交界线
-		d0--保护层混凝土厚度
+		通过轮廓线及保护层厚度计算核心混凝土与外侧保护层混凝土交界线
+		输入：
+			d0:保护层混凝土厚度
+		返回：
+			returnNodeList:外分界线节点列表[(x1,y1),(x2,y2),...,(xn,yn)]
 		"""
 		returnNodeList=self._middleLineNode(self.outNode, d0, pos="outLine")
 		outNodeDict={(i1+1):returnNodeList[i1] for i1 in range(len(returnNodeList))}
@@ -128,8 +135,11 @@ class PolygonSection():
 
 	def innerLinePlot(self,d0):
 		"""
-		内层洞周围核心混凝土与保护层混凝土的分界线
-		d0--保护层混凝土厚度
+		核心混凝土与内轮廓保护层混凝土的分界线绘制
+		输入：
+			d0--保护层混凝土厚度
+		返回：
+			innerList:内分界线节点列表[(x1,y1),(x2,y2),...,(xn,yn)]
 		"""
 		if self.inNode != None:
 			innerList=[]
@@ -150,7 +160,11 @@ class PolygonSection():
 	def coreMesh(self,eleSize,outLineList,inLineList=None):
 		"""
 		核心混凝土的划分
-		eleSize-每个三角形的边长
+		输入：
+			eleSize:纤维单元的边长
+			outLineList:外分界线节点列表[(x1,y1),(x2,y2),...,(xn,yn)]
+			inLineList:内分界线节点列表[(x1,y1),(x2,y2),...,(xn,yn)]
+		返回：
 		"""
 		n=len(inLineList)
 		if inLineList==None:
@@ -167,8 +181,17 @@ class PolygonSection():
 
 	def _coverDivide(self,outNodeDict,inNodeDict,eleDict,size,d0):
 		"""
-		每个保护层混凝土的划分
-		size-分割单元尺寸
+		保护层混凝土的分割
+		输入:
+			outNodeDict:外侧轮廓节点字典--{1:(3.5,3),2:(1.5,5),3:(-1.5,5),4:(-3.5,3)}
+			inNodeDict:内侧轮廓节对应点字典--{1:(2.5,2),2:(0.5,4),3:(-0.5,4),4:(-2.5,2)}
+			eleDict:外侧轮廓单元字典:--{1:(1,2),2:(2,3),3:(3,4),4:(4,1)}
+			size:保护层混凝土纤维单元尺寸
+			d0:混凝土保护层厚度
+		返回：
+			centerCoordList:保护层纤维单元中心坐标及面积列表--[(xc1,yc1,A1),(xc2,yc2,A2),...,)
+			outPlotNode:外侧分割后各个节点坐标列表--[(x1,y1),(x2,y2),...,(xn,yn)]
+			inPlotNode:内侧分割后各个节点坐标列表--[(xin1,yin1),...,(xinn,yinn)]
 		"""
 		nLine=len(eleDict)
 		outPlotNode=[]
@@ -495,10 +518,10 @@ if __name__=="__main__":
 	# inSideEle=[{1:(1,2),2:(2,3),3:(3,4),4:(4,5),5:(5,6),6:(6,7),7:(7,8),8:(8,9),9:(9,10),10:(10,11),11:(11,12),12:(12,1)}]
 	######################################################################################
 	##########################---中塔柱截面---#############################################
-	# outSideNode={1:(3.5,3),2:(1.5,5),3:(-1.5,5),4:(-3.5,3),5:(-3.5,-3),6:(-1.5,-5),7:(1.5,-5),8:(3.5,-3)}
-	# outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}
-	# inSideNode=[{1:(1.9,2.4),2:(1.1,3.2),3:(-1.1,3.2),4:(-1.9,2.4),5:(-1.9,-2.4),6:(-1.1,-3.2),7:(1.1,-3.2),8:(1.9,-2.4)}]
-	# inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}]
+	outSideNode={1:(3.5,3),2:(1.5,5),3:(-1.5,5),4:(-3.5,3),5:(-3.5,-3),6:(-1.5,-5),7:(1.5,-5),8:(3.5,-3)}
+	outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}
+	inSideNode=[{1:(1.9,2.4),2:(1.1,3.2),3:(-1.1,3.2),4:(-1.9,2.4),5:(-1.9,-2.4),6:(-1.1,-3.2),7:(1.1,-3.2),8:(1.9,-2.4)}]
+	inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}]
 	######################################################################################
 	##########################---下塔柱截面---#############################################
 
@@ -506,7 +529,8 @@ if __name__=="__main__":
 
 
 	######################################################################################
-	# fig,ax = plt.subplots()
+	# fig = plt.figure(figsize=(3.5,5))
+	# ax = fig.add_subplot(111)
 	# d0=0.2  #保护层厚度
 	# eleSize=0.3  #核心纤维的大小
 	# coverSize=0.3 #保护层纤维大小
@@ -514,7 +538,7 @@ if __name__=="__main__":
 	# outBarD=0.032
 	# inBarDist=0.3
 	# inBarD=0.032
-	# sectInstance=FiberSection(fig,ax,outSideNode,outSideEle,inSideNode,inSideEle)
+	# sectInstance=PolygonSection(ax,outSideNode,outSideEle,inSideNode,inSideEle)
 	# sectInstance.sectPlot()
 	# outLineList=sectInstance.coverLinePlot(d0)
 	# inLineList=sectInstance.innerLinePlot(d0)
@@ -528,24 +552,26 @@ if __name__=="__main__":
 	######################################################################################
 	#########################################---圆形截面---################################
 	####实心截面,逆时针
-	fig = plt.figure(figsize=(5,5))
-	ax = fig.add_subplot(111)
-	outbarD=0.03 #纵向钢筋直径
-	outbarDist=0.15 #纵向钢筋间距
-	inBarD=0.03
-	inBarDist=0.15
-	d0=0.1 #保护层混凝土厚度
-	eleSize=0.15  #核心纤维的大小
-	coverSize=0.3 #保护层纤维大小
-	outD=3 #截面外圆直径
-	inD=1
+	# fig = plt.figure(figsize=(5,5))
+	# ax = fig.add_subplot(111)
+	# outbarD=0.03 #纵向钢筋直径
+	# outbarDist=0.15 #纵向钢筋间距
+	# inBarD=0.03
+	# inBarDist=0.15
+	# d0=0.1 #保护层混凝土厚度
+	# eleSize=0.15  #核心纤维的大小
+	# coverSize=0.15 #保护层纤维大小
+	# outD=3 #截面外圆直径
+	# inD=1
+	#
+	# circleInstance=CircleSection(ax,d0,outD,inD)
+	# circleInstance.sectPlot()
+	# circleInstance.coreMesh(eleSize)
+	# circleInstance.coverMesh(coverSize)
+	# circleInstance.barMesh(outbarD, outbarDist,inBarD,inBarDist)
+	#
+	# plt.show()
 
-	circleInstance=CircleSection(ax,d0,outD)
-	circleInstance.sectPlot()
-	circleInstance.coreMesh(eleSize)
-	circleInstance.coverMesh(coverSize)
-	circleInstance.barMesh(outbarD, outbarDist)
-
-	plt.show()
+	print(help(PolygonSection))
 
 
