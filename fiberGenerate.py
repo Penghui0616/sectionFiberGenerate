@@ -1,5 +1,10 @@
 #-*-coding: UTF-8-*-
-import subprocess
+######################################################################################
+#  Author: Junjun Guo
+#  E-mail: guojj@tongji.edu.cn/guojj_ce@163.com
+#    Date: 01/01/2020
+#  Environemet: Successfully excucted in python 3.6
+######################################################################################
 import dmsh
 import optimesh
 import meshio
@@ -8,9 +13,9 @@ import numpy as np
 from scipy.linalg import solve
 import math
 ######################################################################################
-class FiberSection():
+class PolygonSection():
 	"""
-	生成纤维截面
+	多边形截面纤维划分
 	"""
 	def __init__(self, fig,ax,outNode,outEle,inNode=None,inEle=None):
 		"""
@@ -322,6 +327,77 @@ class FiberSection():
 				inBarFiber, inXList, inYList = self._barDivide(inBarD, inBarDist, inBarLineDict[i1], inBarLineEle[i1])
 				self.ax.scatter(inXList, inYList, s=10, c="k", zorder=2)
 
+
+class CircleSection():
+	"""
+	圆形截面
+	"""
+	def __init__(self,ax,d0,outD,inD=None):
+		"""
+		fig,ax--绘图环境
+		"""
+		self.ax=ax
+		self.d0=d0
+		self.outD=outD
+		self.inD=inD
+
+	def sectPlot(self):
+		"""
+		初始截面的绘制
+		"""
+		theta = np.arange(0, 2 * np.pi, 0.01)
+		outxList =(self.outD/2.0)*np.cos(theta)
+		outyList=(self.outD/2.0)*np.sin(theta)
+		self.ax.plot(outxList,outyList,"r",linewidth=1)
+		if self.inD!=None:
+			inxList=(self.inD/2.0)*np.cos(theta)
+			inyList=(self.inD/2.0)*np.sin(theta)
+			self.ax.plot(inxList,inyList,"r",linewidth=1)
+
+	def coreMesh(self,eleSize):
+		"""
+		核心混凝土的划分
+		eleSize-核心区纤维单元大小
+		"""
+		outDNew=self.outD-self.d0*2.0
+		if self.inD!=None:
+			inDNew=self.inD+self.d0*2.0
+			geo = dmsh.Difference(dmsh.Circle([0, 0], outDNew/2.0), dmsh.Circle([0, 0.0],inDNew/2.0))
+			points, elements= dmsh.generate(geo, eleSize)
+			self.ax.triplot(points[:, 0], points[:, 1], elements, zorder=0)
+
+	def coverMesh(self,coverSize):
+		"""
+		保护层混凝土的划分
+		coverSize-保护层混凝土单元的大小
+		"""
+		outDNew=self.outD-self.d0*2.0
+		outLength=np.pi*self.outD
+		nOutCover=int(outLength/coverSize)
+		outAngle=2*np.pi/nOutCover
+		outArea=(np.pi*self.outD**2)/4.0
+		outNewArea=(np.pi*outDNew**2)/4.0
+		coverArea=(outArea-outNewArea)/nOutCover
+		outR=self.outD/2.0
+		outNewR=outDNew/2.0
+		outNodeList=[(outR*np.cos(outAngle*i1),outR*np.sin(outAngle*i1)) for i1 in range(nOutCover)]
+		outNewNodeList=[(outNewR*np.cos(outAngle*i2),outNewR*np.sin(outAngle*i2)) for i2 in range(nOutCover)]
+		fiberNoutCover=2*nOutCover
+		fiberOutAngle=(2*np.pi)/fiberNoutCover
+		outFiberRadius=(self.outD+outDNew)/4.0
+		outFiberXList=[ outFiberRadius*np.cos(i3*fiberOutAngle) for i3 in range(1,fiberNoutCover+1)]
+		outFiberYList=[outFiberRadius*np.sin(i4*fiberOutAngle) for i4 in range(1,fiberNoutCover+1)]
+		coverFiberInfo=[(xc,yc,coverArea) for xc,yc in zip(outFiberXList,outFiberYList)]
+		# self.ax.scatter(outFiberXList,outFiberYList,s=10,c="k",zorder = 2)
+		for i5 in range(len(outNodeList)):
+			xList=[outNodeList[i5][0],outNewNodeList[i5][0]]
+			yList=[outNodeList[i5][1],outNewNodeList[i5][1]]
+			self.ax.plot(xList,yList,"r",linewidth=1)
+
+
+
+
+
 if __name__=="__main__":
 	#########---多边形截面内有一个洞---####################################################
 	##########################---上塔柱截面---############################################
@@ -335,10 +411,10 @@ if __name__=="__main__":
 	# inSideEle=[{1:(1,2),2:(2,3),3:(3,4),4:(4,5),5:(5,6),6:(6,7),7:(7,8),8:(8,9),9:(9,10),10:(10,11),11:(11,12),12:(12,1)}]
 	######################################################################################
 	##########################---中塔柱截面---#############################################
-	outSideNode={1:(3.5,3),2:(1.5,5),3:(-1.5,5),4:(-3.5,3),5:(-3.5,-3),6:(-1.5,-5),7:(1.5,-5),8:(3.5,-3)}
-	outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}
-	inSideNode=[{1:(1.9,2.4),2:(1.1,3.2),3:(-1.1,3.2),4:(-1.9,2.4),5:(-1.9,-2.4),6:(-1.1,-3.2),7:(1.1,-3.2),8:(1.9,-2.4)}]
-	inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}]
+	# outSideNode={1:(3.5,3),2:(1.5,5),3:(-1.5,5),4:(-3.5,3),5:(-3.5,-3),6:(-1.5,-5),7:(1.5,-5),8:(3.5,-3)}
+	# outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}
+	# inSideNode=[{1:(1.9,2.4),2:(1.1,3.2),3:(-1.1,3.2),4:(-1.9,2.4),5:(-1.9,-2.4),6:(-1.1,-3.2),7:(1.1,-3.2),8:(1.9,-2.4)}]
+	# inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}]
 	######################################################################################
 	##########################---下塔柱截面---#############################################
 
@@ -346,22 +422,43 @@ if __name__=="__main__":
 
 
 	######################################################################################
-	fig,ax = plt.subplots()
-	d0=0.2  #保护层厚度
-	eleSize=0.3  #核心纤维的大小
+	# fig,ax = plt.subplots()
+	# d0=0.2  #保护层厚度
+	# eleSize=0.3  #核心纤维的大小
+	# coverSize=0.3 #保护层纤维大小
+	# outBarDist=0.3
+	# outBarD=0.032
+	# inBarDist=0.3
+	# inBarD=0.032
+	# sectInstance=FiberSection(fig,ax,outSideNode,outSideEle,inSideNode,inSideEle)
+	# sectInstance.sectPlot()
+	# outLineList=sectInstance.coverLinePlot(d0)
+	# inLineList=sectInstance.innerLinePlot(d0)
+	# sectInstance.coreMesh(eleSize,outLineList,inLineList)
+	# # print(len(sectInstance.inNewNodeDict))
+	# # print(sectInstance.outNewNodeDict)
+	# sectInstance.coverMesh(coverSize,d0)
+	# sectInstance.barMesh(outBarD,outBarDist,inBarD,inBarDist)
+	# plt.show()
+
+	######################################################################################
+	#########################################---圆形截面---################################
+	####实心截面,逆时针
+	fig = plt.figure(figsize=(5,5))
+	ax = fig.add_subplot(111)
+	barD=0.03 #纵向钢筋直径
+	barDist=0.3 #纵向钢筋间距
+	d0=0.1 #保护层混凝土厚度
+	eleSize=0.15  #核心纤维的大小
 	coverSize=0.3 #保护层纤维大小
-	outBarDist=0.3
-	outBarD=0.032
-	inBarDist=0.3
-	inBarD=0.032
-	sectInstance=FiberSection(fig,ax,outSideNode,outSideEle,inSideNode,inSideEle)
-	sectInstance.sectPlot()
-	outLineList=sectInstance.coverLinePlot(d0)
-	inLineList=sectInstance.innerLinePlot(d0)
-	sectInstance.coreMesh(eleSize,outLineList,inLineList)
-	# print(len(sectInstance.inNewNodeDict))
-	# print(sectInstance.outNewNodeDict)
-	sectInstance.coverMesh(coverSize,d0)
-	sectInstance.barMesh(outBarD,outBarDist,inBarD,inBarDist)
-	print(2)
+	outD=3 #截面外圆直径
+	inD=1
+
+	circleInstance=CircleSection(ax,d0,outD,inD)
+	circleInstance.sectPlot()
+	circleInstance.coreMesh(eleSize)
+	circleInstance.coverMesh(coverSize)
+
 	plt.show()
+
+
