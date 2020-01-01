@@ -363,5 +363,5 @@ if __name__=="__main__":
 	# print(sectInstance.outNewNodeDict)
 	sectInstance.coverMesh(coverSize,d0)
 	sectInstance.barMesh(outBarD,outBarDist,inBarD,inBarDist)
-
+	print(2)
 	plt.show()
