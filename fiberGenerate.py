@@ -348,11 +348,11 @@ class CircleSection():
 		theta = np.arange(0, 2 * np.pi, 0.01)
 		outxList =(self.outD/2.0)*np.cos(theta)
 		outyList=(self.outD/2.0)*np.sin(theta)
-		self.ax.plot(outxList,outyList,"r",linewidth=1)
+		self.ax.plot(outxList,outyList,"r",linewidth=1,zorder=2)
 		if self.inD!=None:
 			inxList=(self.inD/2.0)*np.cos(theta)
 			inyList=(self.inD/2.0)*np.sin(theta)
-			self.ax.plot(inxList,inyList,"r",linewidth=1)
+			self.ax.plot(inxList,inyList,"r",linewidth=1,zorder=2)
 
 	def coreMesh(self,eleSize):
 		"""
@@ -364,35 +364,119 @@ class CircleSection():
 			inDNew=self.inD+self.d0*2.0
 			geo = dmsh.Difference(dmsh.Circle([0, 0], outDNew/2.0), dmsh.Circle([0, 0.0],inDNew/2.0))
 			points, elements= dmsh.generate(geo, eleSize)
-			self.ax.triplot(points[:, 0], points[:, 1], elements, zorder=0)
+			self.ax.triplot(points[:, 0], points[:, 1], elements)
+		else:
+			geo = dmsh.Circle([0.0, 0.0],outDNew/2.0)
+			points, elements = dmsh.generate(geo,eleSize)
+			self.ax.triplot(points[:, 0], points[:, 1], elements)
+
+	def _coverDivide(self,coverSize,pos="out"):
+		"""
+		保护层混凝土的分割
+		coverSize-纤维单元大小
+		pos-外轮廓("out"),内轮廓("in)"
+		"""
+		if pos=="out":
+			D=self.outD
+			DNew = self.outD - self.d0 * 2.0
+			circumLength = np.pi * self.outD
+			Area = (np.pi * self.outD ** 2) / 4.0
+			NewArea = (np.pi *DNew ** 2) / 4.0
+			nCover = int(circumLength / coverSize)
+			coverArea = (Area - NewArea) / nCover
+			R = self.outD / 2.0
+			NewR = DNew / 2.0
+		elif pos=="in":
+			D = self.inD
+			DNew = self.inD + self.d0 * 2.0
+			circumLength = np.pi * D
+			Area = (np.pi * D ** 2) / 4.0
+			NewArea = (np.pi * DNew ** 2) / 4.0
+			nCover = int(circumLength / coverSize)
+			coverArea = (NewArea-Area) / nCover
+			R = self.inD / 2.0
+			NewR = DNew / 2.0
+		Angle = 2 * np.pi / nCover
+		NodeList = [(R * np.cos(Angle * i1), R * np.sin(Angle * i1)) for i1 in range(nCover)]
+		NewNodeList = [(NewR * np.cos(Angle * i2), NewR * np.sin(Angle * i2)) for i2 in range(nCover)]
+		fiberNCover = nCover
+		fiberAngle = (2 * np.pi) / fiberNCover
+		FiberRadius = (D + DNew) / 4.0
+		FiberXList = [FiberRadius * np.cos((2*i3-1) *0.5*fiberAngle) for i3 in range(1, fiberNCover + 1)]
+		FiberYList = [FiberRadius * np.sin((2*i4-1) * 0.5*fiberAngle) for i4 in range(1, fiberNCover + 1)]
+		coverFiberInfo = [(xc, yc, coverArea) for xc, yc in zip(FiberXList, FiberYList)]
+		return coverFiberInfo,FiberXList,FiberYList,NodeList,NewNodeList
 
 	def coverMesh(self,coverSize):
 		"""
 		保护层混凝土的划分
 		coverSize-保护层混凝土单元的大小
 		"""
-		outDNew=self.outD-self.d0*2.0
-		outLength=np.pi*self.outD
-		nOutCover=int(outLength/coverSize)
-		outAngle=2*np.pi/nOutCover
-		outArea=(np.pi*self.outD**2)/4.0
-		outNewArea=(np.pi*outDNew**2)/4.0
-		coverArea=(outArea-outNewArea)/nOutCover
-		outR=self.outD/2.0
-		outNewR=outDNew/2.0
-		outNodeList=[(outR*np.cos(outAngle*i1),outR*np.sin(outAngle*i1)) for i1 in range(nOutCover)]
-		outNewNodeList=[(outNewR*np.cos(outAngle*i2),outNewR*np.sin(outAngle*i2)) for i2 in range(nOutCover)]
-		fiberNoutCover=2*nOutCover
-		fiberOutAngle=(2*np.pi)/fiberNoutCover
-		outFiberRadius=(self.outD+outDNew)/4.0
-		outFiberXList=[ outFiberRadius*np.cos(i3*fiberOutAngle) for i3 in range(1,fiberNoutCover+1)]
-		outFiberYList=[outFiberRadius*np.sin(i4*fiberOutAngle) for i4 in range(1,fiberNoutCover+1)]
-		coverFiberInfo=[(xc,yc,coverArea) for xc,yc in zip(outFiberXList,outFiberYList)]
+		outCoverFiberInfo,outFiberXList,outFiberYList,outNodeList,outNewNodeList=self._coverDivide(coverSize, pos="out")
+
+		outDNew=self.outD-2.0*self.d0
+		theta = np.arange(0, 2 * np.pi, 0.01)
+		outThetaX=(outDNew/2.0)*np.cos(theta)
+		outThetaY=(outDNew/2.0)*np.sin(theta)
+		self.ax.plot(outThetaX,outThetaY,"r",linewidth=1,zorder=2)
 		# self.ax.scatter(outFiberXList,outFiberYList,s=10,c="k",zorder = 2)
 		for i5 in range(len(outNodeList)):
 			xList=[outNodeList[i5][0],outNewNodeList[i5][0]]
 			yList=[outNodeList[i5][1],outNewNodeList[i5][1]]
-			self.ax.plot(xList,yList,"r",linewidth=1)
+			self.ax.plot(xList,yList,"r",linewidth=1,zorder=2)
+		if self.inD!=None:
+			inDNew = self.inD + 2.0 * self.d0
+			inCoverFiberInfo, inFiberXList, inFiberYList, inNodeList, inNewNodeList\
+				= self._coverDivide(coverSize, pos="in")
+			inThetaX = (inDNew / 2.0) * np.cos(theta)
+			inThetaY = (inDNew / 2.0) * np.sin(theta)
+			self.ax.plot(inThetaX, inThetaY, "r", linewidth=1, zorder=2)
+			# self.ax.scatter(inFiberXList,inFiberYList,s=10,c="k",zorder = 2)
+			for i5 in range(len(inNodeList)):
+				xList = [inNodeList[i5][0], inNewNodeList[i5][0]]
+				yList = [inNodeList[i5][1], inNewNodeList[i5][1]]
+				self.ax.plot(xList, yList, "r", linewidth=1, zorder=2)
+
+	def _barDivide(self,barD,barDist,pos="out"):
+		"""
+		纵向纤维截面
+		"""
+		area=(np.pi*barD**2)/4.0
+		if pos=="out":
+			newR=(self.outD-2.0*self.d0)/2.0
+		elif pos=="in":
+			newR=(self.inD+2*self.d0)/2.0
+		circumLength = 2 * np.pi * newR
+		nBar=int(circumLength/barDist)
+		angle=(2*np.pi)/nBar
+		fiberXList=[newR*np.cos(angle*i1) for i1 in range(1,nBar+1)]
+		fiberYList=[newR*np.sin(angle*i2) for i2 in range(1,nBar+1)]
+		barFiberInfo=[(xb,yb,area) for xb,yb in zip(fiberXList,fiberYList)]
+		return barFiberInfo,fiberXList,fiberYList
+
+
+
+	def barMesh(self,outBarD,outBarDist,inBarD=None,inBarDist=None):
+		"""
+		纵筋的纤维划分
+		outBarD-外轮廓纵筋的直径
+		outBarDist-外轮廓纵筋的间距
+		inBarD-内轮廓纵筋的直径
+		inBarDist-内轮廓纵筋的间距
+		"""
+		outFiberInfo,outFiberXList,outFiberYList=self._barDivide(outBarD, outBarDist, pos="out")
+		self.ax.scatter(outFiberXList,outFiberYList,s=10,c="k",zorder = 3)
+		if self.inD!=None:
+			inFiberInfo, inFiberXList, inFiberYList = self._barDivide(inBarD, inBarDist, pos="in")
+			self.ax.scatter(inFiberXList, inFiberYList, s=10, c="k", zorder=3)
+
+
+
+
+
+
+
+
 
 
 
@@ -446,18 +530,21 @@ if __name__=="__main__":
 	####实心截面,逆时针
 	fig = plt.figure(figsize=(5,5))
 	ax = fig.add_subplot(111)
-	barD=0.03 #纵向钢筋直径
-	barDist=0.3 #纵向钢筋间距
+	outbarD=0.03 #纵向钢筋直径
+	outbarDist=0.15 #纵向钢筋间距
+	inBarD=0.03
+	inBarDist=0.15
 	d0=0.1 #保护层混凝土厚度
 	eleSize=0.15  #核心纤维的大小
 	coverSize=0.3 #保护层纤维大小
 	outD=3 #截面外圆直径
 	inD=1
 
-	circleInstance=CircleSection(ax,d0,outD,inD)
+	circleInstance=CircleSection(ax,d0,outD)
 	circleInstance.sectPlot()
 	circleInstance.coreMesh(eleSize)
 	circleInstance.coverMesh(coverSize)
+	circleInstance.barMesh(outbarD, outbarDist)
 
 	plt.show()
 
