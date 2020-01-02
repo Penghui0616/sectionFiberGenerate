@@ -166,16 +166,21 @@ class PolygonSection():
 			inLineList:内分界线节点列表[(x1,y1),(x2,y2),...,(xn,yn)]
 		返回：
 		"""
-		n=len(inLineList)
+
 		if inLineList==None:
-			geo = dmsh.Difference(
-				dmsh.Polygon(outLineList)
-			)
-		elif n==1:
+			geo=dmsh.Polygon(outLineList)
+		elif len(inLineList)==1:
 			geo = dmsh.Difference(
 				dmsh.Polygon(outLineList),
 				dmsh.Polygon(inLineList[0]),
 			)
+		elif len(inLineList)==2:
+			geo = dmsh.Difference(
+				dmsh.Polygon(outLineList),
+				dmsh.Polygon(inLineList[0]),
+				dmsh.Polygon(inLineList[1]),
+			)
+
 		points, elements = dmsh.generate(geo, eleSize)
 		self.ax.triplot(points[:, 0], points[:, 1], elements,zorder = 0)
 
@@ -245,8 +250,11 @@ class PolygonSection():
 	def coverMesh(self,size,d0):
 		"""
 		保护层混凝土的划分
-		dcover-划分单元的大小
-		d0-保护层厚度
+		输入：
+			size：核心混凝土纤维尺寸
+			d0：保护层厚度
+		返回：
+
 		"""
 		nodeOutDict=self.outNode
 		eleOutDict=self.outEle
@@ -296,10 +304,15 @@ class PolygonSection():
 	def _barDivide(self,barD,barDist,nodeDict,lineEleDict):
 		"""
 		钢筋纤维的划分
-		barD-单个纵筋直径
-		barDist-纵筋间距
-		nodeDict-钢筋线节点字典
-		lineEleDict-钢筋线单元字典
+		输入：
+			barD-单个纵筋直径
+			barDist-纵筋间距
+			nodeDict-钢筋线节点字典 {1:(x1,y1),2:(x2,y2),...,(xn,yn)}
+			lineEleDict-钢筋线单元字典 {1:(1,2),2:(2,3),3:(3,1)}
+		返回：
+			barFiberList:钢筋纤维单元列表 [(xb1,yb1,A1),(xb2,yb2,A2),...,(xbn,ybn,An)]
+			xRetrunList:钢筋纤维横坐标列表[xb1,xb2,...,xbn]
+			yReturnList:钢筋纤维纵坐标列表[yb1,yb2,...,ybn]
 		"""
 		area=np.pi*barD**2/4.0
 		nLine = len(lineEleDict)
@@ -327,24 +340,24 @@ class PolygonSection():
 				yReturnList.append(lineBarCoorList[i3][1])
 		return barFiberList,xReturnList,yReturnList
 
-
-
-	def barMesh(self,outBarD,outBarDist,inBarD,inBarDist):
+	def barMesh(self,outBarD,outBarDist,inBarD=None,inBarDist=None):
 		"""
-		内外层钢筋的划分
-		outBarD-外侧钢筋直径
-		outBarDist-外侧钢筋间距
-		inBarD-内侧钢筋直径
-		inBarDist-内侧钢筋间距
+		钢筋纤维的划分
+		输入：
+			outBarD：外轮廓钢筋直径
+			outBarDist：外轮廓钢筋间距
+			inBarD：内轮廓钢筋直径
+			inBarDist：内轮廓钢筋间距
+		返回：
 		"""
 		outBarLineDict=self.outNewNodeDict  # 新生成的外侧保护层混凝土线节点字典
 		outBarListEle=self.outEle
-		inBarLineDict=self.inNewNodeDict # 新生成的内侧保护层混凝土线节点字典列表
-		inBarLineEle=self.inEle
 		#外侧钢筋的划分
 		outBarFiber,outXList,outYList=self._barDivide(outBarD,outBarDist,outBarLineDict,outBarListEle)
 		self.ax.scatter(outXList,outYList,s=10,c="k",zorder = 2)
 		if self.inNode != None:
+			inBarLineDict = self.inNewNodeDict  # 新生成的内侧保护层混凝土线节点字典列表
+			inBarLineEle = self.inEle
 			nEle=len(inBarLineEle)
 			for i1 in range(nEle):
 				inBarFiber, inXList, inYList = self._barDivide(inBarD, inBarDist, inBarLineDict[i1], inBarLineEle[i1])
@@ -494,17 +507,6 @@ class CircleSection():
 			self.ax.scatter(inFiberXList, inFiberYList, s=10, c="k", zorder=3)
 
 
-
-
-
-
-
-
-
-
-
-
-
 if __name__=="__main__":
 	#########---多边形截面内有一个洞---####################################################
 	##########################---上塔柱截面---############################################
@@ -529,25 +531,25 @@ if __name__=="__main__":
 
 
 	######################################################################################
-	# fig = plt.figure(figsize=(3.5,5))
-	# ax = fig.add_subplot(111)
-	# d0=0.2  #保护层厚度
-	# eleSize=0.3  #核心纤维的大小
-	# coverSize=0.3 #保护层纤维大小
-	# outBarDist=0.3
-	# outBarD=0.032
-	# inBarDist=0.3
-	# inBarD=0.032
-	# sectInstance=PolygonSection(ax,outSideNode,outSideEle,inSideNode,inSideEle)
-	# sectInstance.sectPlot()
-	# outLineList=sectInstance.coverLinePlot(d0)
+	fig = plt.figure(figsize=(3.5,5))
+	ax = fig.add_subplot(111)
+	d0=0.2  #保护层厚度
+	eleSize=0.3  #核心纤维的大小
+	coverSize=0.3 #保护层纤维大小
+	outBarDist=0.3
+	outBarD=0.032
+	inBarDist=0.3
+	inBarD=0.032
+	sectInstance=PolygonSection(ax,outSideNode,outSideEle)
+	sectInstance.sectPlot()
+	outLineList=sectInstance.coverLinePlot(d0)
 	# inLineList=sectInstance.innerLinePlot(d0)
-	# sectInstance.coreMesh(eleSize,outLineList,inLineList)
-	# # print(len(sectInstance.inNewNodeDict))
-	# # print(sectInstance.outNewNodeDict)
-	# sectInstance.coverMesh(coverSize,d0)
-	# sectInstance.barMesh(outBarD,outBarDist,inBarD,inBarDist)
-	# plt.show()
+	sectInstance.coreMesh(eleSize,outLineList)
+	# print(len(sectInstance.inNewNodeDict))
+	# print(sectInstance.outNewNodeDict)
+	sectInstance.coverMesh(coverSize,d0)
+	sectInstance.barMesh(outBarD,outBarDist)
+	plt.show()
 
 	######################################################################################
 	#########################################---圆形截面---################################
