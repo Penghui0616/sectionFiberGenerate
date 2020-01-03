@@ -771,10 +771,10 @@ if __name__=="__main__":
 	# inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)},{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}]
 	######################################################################################
 	#########---多边形截面内有两个洞（y向）--###############################################
-	outSideNode = {1: (-5, -5), 2: (5, -5), 3: (5, 5), 4: (-5, 5)}
-	outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}
-	inSideNode = [{1: (-3, -3), 2: (-1, -3), 3: (-1, 3), 4: (-3, 3)}, {1: (1, -3), 2: (3, -3), 3: (3, 3), 4: (1, 3)}]
-	inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}, {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}]
+	# outSideNode = {1: (-5, -5), 2: (5, -5), 3: (5, 5), 4: (-5, 5)}
+	# outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}
+	# inSideNode = [{1: (-3, -3), 2: (-1, -3), 3: (-1, 3), 4: (-3, 3)}, {1: (1, -3), 2: (3, -3), 3: (3, 3), 4: (1, 3)}]
+	# inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}, {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}]
 	######################################################################################
 	# fig = plt.figure(figsize=(5, 5))
 	# ax = fig.add_subplot(111)
@@ -798,25 +798,25 @@ if __name__=="__main__":
 ######################################################################################
 	#########################################---圆形截面---################################
 	####实心截面,逆时针
-	# fig = plt.figure(figsize=(5,5))
-	# ax = fig.add_subplot(111)
-	# outbarD=0.03 #纵向钢筋直径
-	# outbarDist=0.15 #纵向钢筋间距
-	# inBarD=0.03
-	# inBarDist=0.15
-	# d0=0.1 #保护层混凝土厚度
-	# eleSize=0.15  #核心纤维的大小
-	# coverSize=0.15 #保护层纤维大小
-	# outD=3 #截面外圆直径
-	# inD=1
-	#
-	# circleInstance=CircleSection(ax,d0,outD,inD)
-	# circleInstance.sectPlot()
-	# circleInstance.coreMesh(eleSize)
-	# circleInstance.coverMesh(coverSize)
-	# circleInstance.barMesh(outbarD, outbarDist,inBarD,inBarDist)
-	#
-	# plt.show()
+	fig = plt.figure(figsize=(5,5))
+	ax = fig.add_subplot(111)
+	outbarD=0.03 #纵向钢筋直径
+	outbarDist=0.15 #纵向钢筋间距
+	inBarD=0.03
+	inBarDist=0.15
+	d0=0.1 #保护层混凝土厚度
+	eleSize=0.15  #核心纤维的大小
+	coverSize=0.15 #保护层纤维大小
+	outD=3 #截面外圆直径
+	inD=1
+
+	circleInstance=CircleSection(ax,d0,outD)
+	circleInstance.sectPlot()
+	circleInstance.coreMesh(eleSize)
+	circleInstance.coverMesh(coverSize)
+	circleInstance.barMesh(outbarD, outbarDist)
+
+	plt.show()
 
 
 
