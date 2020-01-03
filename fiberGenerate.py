@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.linalg import solve
 import math
+import time
 ######################################################################################
 class PolygonSection():
 	"""
@@ -71,7 +72,41 @@ class PolygonSection():
 		else:
 			pass
 
-	def _middleLineNode(self,nodeDict,d0,pos="outLine",zhole=1,yhole=1):
+	def _nearLineIdentify(self,paraList1,paraList2,zhole,yhole):
+		"""
+		距离坐标轴最近距离线段识别
+		输入：
+			paraList1,paraList2:交界线特征值[(a1,b1,c1_1,c1_2),(a2,b2,c2_1,c2_2),...]
+		返回：
+			indexChangeList:识别的位置索引列表[index1,index2]
+		"""
+		indexChangeList = []
+		posit=None
+		if zhole == 2 and yhole == 1:
+			posit=0
+		else:
+			posit=1
+		horizonNum = []
+		horizonValue = []
+		for num, value1 in enumerate(paraList1):
+			if value1[posit] == 0:
+				horizonNum.append(num)
+				horizonValue.append(value1[2])
+		index1 = horizonValue.index(min(np.abs(horizonValue)))
+		indexChange = horizonNum[index1]
+		indexChangeList.append((indexChange))
+		horizonNum2 = []
+		horizonValue2 = []
+		for num2, value2 in enumerate(paraList2):
+			if value2[posit] == 0:
+				horizonNum2.append(num2)
+				horizonValue2.append(value2[2])
+		index2 = horizonValue2.index(min(np.abs(horizonValue2)))
+		indexChange2 = horizonNum2[index2]
+		indexChangeList.append((indexChange2))
+		return indexChangeList
+
+	def _middleLineNode(self,nodeDict,d0,zhole=1,yhole=1,pos="outLine"):
 		"""
 		计算分界线各节点的列表
 		输入：
@@ -110,29 +145,9 @@ class PolygonSection():
 			c2_2 = c2 + math.sqrt(a2 ** 2 + b2 ** 2) * d0
 			paraList1.append((a1,b1,c1_1,c1_2))
 			paraList2.append((a2,b2,c2_1,c2_2))
-		indexChangeList=[]
-		if zhole==2:
-			horizonNum = []
-			horizonValue = []
-			for num,value1 in enumerate(paraList1):
-				if value1[0]==0:
-					horizonNum.append(num)
-					horizonValue.append(value1[2])
-			index1=horizonValue.index(min(np.abs(horizonValue)))
-			indexChange=horizonNum[index1]
-			indexChangeList.append((indexChange))
-			horizonNum2 = []
-			horizonValue2 = []
-			for num2, value2 in enumerate(paraList2):
-				if value2[0] == 0:
-					horizonNum2.append(num2)
-					horizonValue2.append(value2[2])
-			index2 = horizonValue2.index(min(np.abs(horizonValue2)))
-			indexChange2 = horizonNum2[index2]
-			indexChangeList.append((indexChange2))
-
-
-
+		indexChangeList=None
+		if zhole==2 or yhole==2:
+			indexChangeList=self._nearLineIdentify(paraList1, paraList2, zhole, yhole)
 		for i2 in range(len(paraList1)):
 			c1_1=paraList1[i2][2]
 			c1_2 = paraList1[i2][3]
@@ -144,6 +159,8 @@ class PolygonSection():
 			b2 = paraList2[i2][1]
 			if pos=="outLine":
 				c11 = c1_1 if abs(c1_1) < abs(c1_2) else c1_2
+			elif indexChangeList==None:
+				c11 = c1_2 if abs(c1_1) < abs(c1_2) else c1_1
 			else:
 				if i2!=indexChangeList[0]:
 					c11 = c1_2 if abs(c1_1) < abs(c1_2) else c1_1
@@ -152,6 +169,8 @@ class PolygonSection():
 
 			if pos=="outLine":
 				c22 = c2_1 if abs(c2_1) < abs(c2_2) else c2_2
+			elif indexChangeList==None:
+				c22 = c2_2 if abs(c2_1) < abs(c2_2) else c2_1
 			else:
 				if i2!=indexChangeList[1]:
 					c22 = c2_2 if abs(c2_1) < abs(c2_2) else c2_1
@@ -182,6 +201,23 @@ class PolygonSection():
 			self.ax.plot(each2[0], each2[1], self.coverColor,self.lineWid,zorder = 0)
 		return returnNodeList
 
+	def _twoHoleDirect(self,inNodeDictList):
+		"""
+		判断两个空心所在的方向(若关于Y轴对称，则在Z轴）
+		输入：
+			inNodeDictList:每个轮廓是一个字典[{1:(1.9,2.4),2:(1.1,3.2),3:(-1.1,3.2),4:(-1.9,2.4)}]
+		返回：
+			zHole,yHole:Z,Y轴空心的个数
+		"""
+		xList=[]
+		for each in inNodeDictList[0].values():
+			xList.append(each[0])
+		if max(xList)<0 or min(xList)>0:
+			zHole,yHole=1,2
+		else:
+			zHole,yHole=2,1
+		return zHole,yHole
+
 	def innerLinePlot(self,d0):
 		"""
 		核心混凝土与内轮廓保护层混凝土的分界线绘制
@@ -191,23 +227,25 @@ class PolygonSection():
 			innerList:内分界线节点列表[(x1,y1),(x2,y2),...,(xn,yn)]
 		"""
 		if self.inNode != None:
+			zhole,yhole=None,None
 			if len(self.inNode)==1:
-				pass
+				zhole,yhole=1,1
 			elif len(self.inNode)==2:
-				innerList=[]
-				innerListDict=[]
-				for eachNode,eachEle in zip(self.inNode,self.inEle):
-					returnNodeList = self._middleLineNode(eachNode, d0, pos="inLine",zhole=2,yhole=1)
-					innerList.append(returnNodeList)
-					innerListDict.append({(j1+1):returnNodeList[j1] for j1 in range(len(returnNodeList))})
-					inNodeDict = {(i1 + 1): returnNodeList[i1] for i1 in range(len(returnNodeList))}
-					inEleDict = eachEle
-					inlineList = self._lineNodeList(inNodeDict, inEleDict)
+				zhole,yhole=self._twoHoleDirect(self.inNode)
+			innerList = []
+			innerListDict = []
+			for eachNode, eachEle in zip(self.inNode, self.inEle):
+				returnNodeList = self._middleLineNode(eachNode, d0, zhole, yhole, pos="inLine")
+				innerList.append(returnNodeList)
+				innerListDict.append({(j1 + 1): returnNodeList[j1] for j1 in range(len(returnNodeList))})
+				inNodeDict = {(i1 + 1): returnNodeList[i1] for i1 in range(len(returnNodeList))}
+				inEleDict = eachEle
+				inlineList = self._lineNodeList(inNodeDict, inEleDict)
 
-					for each2 in inlineList:
-						self.ax.plot(each2[0], each2[1],self.coverColor,self.lineWid,zorder = 0)
-				self.inNewNodeDict=innerListDict
-				return innerList
+				for each2 in inlineList:
+					self.ax.plot(each2[0], each2[1], self.coverColor, self.lineWid, zorder=0)
+			self.inNewNodeDict = innerListDict
+			return innerList
 
 	def _lineSort(self,lineNodeList,xInc=0,yInc=0):
 		"""
@@ -229,80 +267,119 @@ class PolygonSection():
 		outList2=None
 		outmin=None
 		outmax=None
-		if yInc==1:
+		posit=None
+		if xInc==1:
+			posit=0
+			for num, node in enumerate(lineNodeList):
+				if node[1] < 0:
+					outNode1.append(node)
+				else:
+					outNode2.append(node)
+		else:
+			posit = 1
 			for num, node in enumerate(lineNodeList):
 				if node[0] > 0:
 					outNode1.append(node)
 				else:
 					outNode2.append(node)
-			outNode1Y = [each1[1] for each1 in outNode1]
-			index1Out = np.argsort(np.array(outNode1Y))
-			outList1 = [outNode1[each2] for each2 in index1Out]
-			outNode2Y = [each3[1] for each3 in outNode2]
-			index2Out = np.argsort(-np.array(outNode2Y))
-			outList2 = [outNode2[each4] for each4 in index2Out]
-			outmin = min(outNode1Y)
-			outmax = max(outNode1Y)
+		outNode1xy = [each1[posit] for each1 in outNode1]
+		index1Out = np.argsort(np.array(outNode1xy))
+		outList1 = [outNode1[each2] for each2 in index1Out]
+		outNode2xy = [each3[posit] for each3 in outNode2]
+		index2Out = np.argsort(-np.array(outNode2xy))
+		outList2 = [outNode2[each4] for each4 in index2Out]
+		outmin = min(outNode1xy)
+		outmax = max(outNode1xy)
 		return outList1,outList2,outmin,outmax
 
-	def _twoHolePolygonDivide(self,outLineList,inLineList):
+	def _twoHolePolygonDivide(self,outLineList,inLineList,zhole,yhole):
 		"""
 		具有两个内轮廓的多边形核心混凝土划分
 		输入：
 			outLineList:外分界线节点列表[(x1,y1),(x2,y2),...,(xn,yn)]
 			inLineList:内分界线节点列表[[(x1,y1),(x2,y2),...,(xn,yn)],[(x1,y1),(x2,y2),...,(xn,yn)]]
+			zhole,yhole:Z，Y轴空心数
 		返回:
 			list1,list2:多边形1及多边形2节点列表[(x1,y1),(x2,y2),...,(xn,yn)]
 		"""
 		inLine1=inLineList[0]
-		inLine2=inLineList[1]
-
 		inLine1X=[each1[0] for each1 in inLine1]
 		inLine1Y =[each2[1] for each2 in inLine1]
-		if min(inLine1X)>0 or max(inLine1X)<0:
-			pass
-		elif min(inLine1Y)>0 or max(inLine1Y)<0:
-			inLineList0 = [each5[1] for each5 in inLineList[0]]
-			if min(inLineList0) > 0:
-				inList1 = inLineList[0]
-				inList2 = inLineList[1]
-			else:
-				inList1 = inLineList[1]
-				inList2 = inLineList[0]
-			outInc,outDec,outmin,outmax=self._lineSort(outLineList, xInc=0, yInc=1)
-			inUpperInc,inUpperDec,inUpperMin,inUpperMax=self._lineSort(inList1,xInc=0,yInc=1)
-			inUpperInc.reverse()
-			inUpperDec.reverse()
-			inLowerInc, inLowerDec, inLowerMin, inLowerMax = self._lineSort(inList2, xInc=0, yInc=1)
-			inLowerInc.reverse()
-			inLowerDec.reverse()
-			list1=[]
-			list2=[]
-			for each6 in outInc:
-				list1.append(each6)
+		posit=None
+		xInc=None
+		yInc=None
+		if (zhole==1) and (yhole==2):
+			posit=0
+			xInc,yInc=1,0
+		elif (zhole==2) and (yhole==1):
+			posit=1
+			xInc, yInc = 0,1
+		inLineList0 = [each5[posit] for each5 in inLineList[0]]
+		if min(inLineList0) > 0:
+			inList1 = inLineList[0]
+			inList2 = inLineList[1]
+		else:
+			inList1 = inLineList[1]
+			inList2 = inLineList[0]
+		outInc, outDec, outmin, outmax = self._lineSort(outLineList, xInc, yInc)
+		inUpperInc, inUpperDec, inUpperMin, inUpperMax = self._lineSort(inList1, xInc, yInc)
+		inUpperInc.reverse()
+		inUpperDec.reverse()
+		inLowerInc, inLowerDec, inLowerMin, inLowerMax = self._lineSort(inList2, xInc, yInc)
+		inLowerInc.reverse()
+		inLowerDec.reverse()
+		list1 = []
+		list2 = []
+		for each6 in outInc:
+			list1.append(each6)
+		if (zhole==1) and (yhole==2):
+			list1.append((outmax,0))
+			list1.append(((inUpperMax,0)))
+		else:
 			list1.append((0,outmax))
 			list1.append(((0,inUpperMax)))
-			for each7 in inUpperInc:
-				list1.append(each7)
-			list1.append((0,inUpperMin))
-			list1.append((0,inLowerMax))
-			for each8 in inLowerInc:
-				list1.append(each8)
-			list1.append((0,inLowerMin))
-			list1.append((0,outmin))
 
-			for each9 in outDec:
-				list2.append(each9)
-			list2.append((0,outmin))
-			list2.append((0,inLowerMin))
-			for each10 in inLowerDec:
-				list2.append(each10)
-			list2.append((0,inLowerMax))
-			list2.append((0,inUpperMin))
-			for each11 in inUpperDec:
-				list2.append(each11)
-			list2.append((0,inUpperMax))
-			list2.append((0,outmax))
+		for each7 in inUpperInc:
+			list1.append(each7)
+		if (zhole == 1) and (yhole == 2):
+			list1.append(( inUpperMin,0))
+			list1.append((inLowerMax,0))
+		else:
+			list1.append((0, inUpperMin))
+			list1.append((0, inLowerMax))
+		for each8 in inLowerInc:
+			list1.append(each8)
+		if (zhole == 1) and (yhole == 2):
+			list1.append((inLowerMin,0))
+			list1.append((outmin,0))
+		else:
+			list1.append((0, inLowerMin))
+			list1.append((0, outmin))
+
+		for each9 in outDec:
+			list2.append(each9)
+		if (zhole == 1) and (yhole == 2):
+			list2.append((outmin,0))
+			list2.append((inLowerMin,0))
+		else:
+			list2.append((0, outmin))
+			list2.append((0, inLowerMin))
+		for each10 in inLowerDec:
+			list2.append(each10)
+		if (zhole == 1) and (yhole == 2):
+			list2.append((inLowerMax,0))
+			list2.append((inUpperMin,0))
+		else:
+			list2.append((0, inLowerMax))
+			list2.append((0, inUpperMin))
+		for each11 in inUpperDec:
+			list2.append(each11)
+		if (zhole == 1) and (yhole == 2):
+			list2.append((inUpperMax,0))
+			list2.append((outmax,0))
+		else:
+			list2.append((0, inUpperMax))
+			list2.append((0, outmax))
 		return list1,list2
 
 	def coreMesh(self,eleSize,outLineList,inLineList=None):
@@ -316,15 +393,19 @@ class PolygonSection():
 		"""
 		if inLineList==None:
 			geo=dmsh.Polygon(outLineList)
+			points, elements = dmsh.generate(geo, eleSize)
+			self.ax.triplot(points[:, 0], points[:, 1], elements, c=self.coreColor, linewidth=self.lineWid, zorder=0)
 		elif len(inLineList)==1:
 			geo = dmsh.Difference(
 				dmsh.Polygon(outLineList),
 				dmsh.Polygon(inLineList[0]),
 			)
+			points, elements = dmsh.generate(geo, eleSize)
+			self.ax.triplot(points[:,0],points[:,1],elements,c=self.coreColor,linewidth=self.lineWid, zorder=0)
 
 		elif len(inLineList)==2:
-			list1,list2=self._twoHolePolygonDivide(outLineList, inLineList)
-
+			zhole,yhole=self._twoHoleDirect(self.inNode)
+			list1,list2=self._twoHolePolygonDivide(outLineList, inLineList,zhole,yhole)
 			geo1= dmsh.Polygon(list1)
 			geo2 = dmsh.Polygon(list2)
 			points1, elements1 = dmsh.generate(geo1, eleSize)
@@ -681,40 +762,40 @@ if __name__=="__main__":
 	######################################################################################
 	##########################---下塔柱截面---#############################################
 
-	#########---多边形截面内有两个洞--#####################################################
-	outSideNode = {1: (4.5,6.655), 2: (2.5, 8.655), 3: (-2.5,8.655), 4: (-4.5, 6.655), 5: (-4.5, -6.655), 6: (-2.5, -8.655), 7: (2.5, -8.655),
-				   8: (4.5, -6.655)}
-	outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}
-	inSideNode = [{1: (2.5, 5.855), 2: (1.7, 6.655), 3: (-1.7,6.655), 4: (-2.5, 5.855), 5: (-2.5, 1.3), 6: (-1.7, 0.5), 7: (1.7, 0.5),8: (2.5,1.3)},
-				  {1:(2.5,-1.3),2:(1.7,-0.5),3:(-1.7,-0.5),4:(-2.5,-1.3),5:(-2.5,-5.855),6:(-1.7,-6.655),7:(1.7,-6.655),8:(2.5,-5.855)}]
-	inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)},{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}]
+	#########---多边形截面内有两个洞（z向）--###############################################
+	# outSideNode = {1: (4.5,6.655), 2: (2.5, 8.655), 3: (-2.5,8.655), 4: (-4.5, 6.655), 5: (-4.5, -6.655), 6: (-2.5, -8.655), 7: (2.5, -8.655),
+	# 			   8: (4.5, -6.655)}
+	# outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}
+	# inSideNode = [{1: (2.5, 5.855), 2: (1.7, 6.655), 3: (-1.7,6.655), 4: (-2.5, 5.855), 5: (-2.5, 1.3), 6: (-1.7, 0.5), 7: (1.7, 0.5),8: (2.5,1.3)},
+	# 			  {1:(2.5,-1.3),2:(1.7,-0.5),3:(-1.7,-0.5),4:(-2.5,-1.3),5:(-2.5,-5.855),6:(-1.7,-6.655),7:(1.7,-6.655),8:(2.5,-5.855)}]
+	# inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)},{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}]
 	######################################################################################
-	fig = plt.figure(figsize=(3.5,5))
-	ax = fig.add_subplot(111)
-	d0=0.2  #保护层厚度
-	eleSize=0.4 #核心纤维的大小
-	coverSize=0.3 #保护层纤维大小
-	outBarDist=0.4
-	outBarD=0.032
-	inBarDist=0.4
-	inBarD=0.032
-	sectInstance=PolygonSection(ax,outSideNode,outSideEle,inSideNode,inSideEle)
-	sectInstance.sectPlot()
-	outLineList=sectInstance.coverLinePlot(d0)
-	inLineList=sectInstance.innerLinePlot(d0)
-	sectInstance.coreMesh(eleSize,outLineList,inLineList)
-	sectInstance.coverMesh(coverSize,d0)
-	sectInstance.barMesh(outBarD,outBarDist,inBarD,inBarDist)
-	plt.show()
-
-
-
-
-
-
-
-
+	#########---多边形截面内有两个洞（y向）--###############################################
+	outSideNode = {1: (-5, -5), 2: (5, -5), 3: (5, 5), 4: (-5, 5)}
+	outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}
+	inSideNode = [{1: (-3, -3), 2: (-1, -3), 3: (-1, 3), 4: (-3, 3)}, {1: (1, -3), 2: (3, -3), 3: (3, 3), 4: (1, 3)}]
+	inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}, {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}]
 	######################################################################################
+	# fig = plt.figure(figsize=(5, 5))
+	# ax = fig.add_subplot(111)
+	# d0 = 0.06  # 保护层厚度
+	# eleSize = 0.2  # 核心纤维的大小
+	# coverSize = 0.3  # 保护层纤维大小
+	# outBarDist = 0.4
+	# outBarD = 0.032
+	# inBarDist = 0.4
+	# inBarD = 0.032
+	# sectInstance = PolygonSection(ax, outSideNode, outSideEle, inSideNode, inSideEle)
+	# sectInstance.sectPlot()
+	# outLineList = sectInstance.coverLinePlot(d0)
+	# inLineList = sectInstance.innerLinePlot(d0)
+	# sectInstance.coreMesh(eleSize, outLineList, inLineList)
+	# sectInstance.coverMesh(coverSize, d0)
+	# sectInstance.barMesh(outBarD, outBarDist, inBarD, inBarDist)
+	# plt.show()
+
+
+######################################################################################
 	#########################################---圆形截面---################################
 	####实心截面,逆时针
 	# fig = plt.figure(figsize=(5,5))
