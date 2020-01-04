@@ -414,11 +414,13 @@ class PolygonSection():
 			outLineList:外分界线节点列表[(x1,y1),(x2,y2),...,(xn,yn)]
 			inLineList:内分界线节点列表[[(x1,y1),(x2,y2),...,(xn,yn)],[(x1,y1),(x2,y2),...,(xn,yn)]]
 		返回：
+			triEleInfoList:纤维单元信息列表[(xc1,yc1,area1),(xc2,yc2,area2)]
 		"""
 		triEleInfoList=None
 		if inLineList==None:
 			geo=dmsh.Polygon(outLineList)
 			points, elements = dmsh.generate(geo, eleSize)
+			triEleInfoList = self._triEleInfo(points, elements)
 			self.ax.triplot(points[:, 0], points[:, 1], elements, c=self.coreColor, linewidth=self.lineWid, zorder=0)
 		elif len(inLineList)==1:
 			geo = dmsh.Difference(
@@ -426,6 +428,7 @@ class PolygonSection():
 				dmsh.Polygon(inLineList[0]),
 			)
 			points, elements = dmsh.generate(geo, eleSize)
+			triEleInfoList = self._triEleInfo(points, elements)
 			self.ax.triplot(points[:,0],points[:,1],elements,c=self.coreColor,linewidth=self.lineWid, zorder=0)
 
 		elif len(inLineList)==2:
@@ -440,8 +443,7 @@ class PolygonSection():
 			triEleInfoList=triEleInfoList1+triEleInfoList2
 			self.ax.triplot(points1[:, 0], points1[:, 1], elements1,c=self.coreColor,linewidth=self.lineWid,zorder = 0)
 			self.ax.triplot(points2[:, 0], points2[:, 1], elements2, c=self.coreColor,linewidth=self.lineWid,zorder=0)
-		area=sum([each[2] for each in triEleInfoList])
-		print(area)
+		return triEleInfoList
 
 	def _coverDivide(self,outNodeDict,inNodeDict,eleDict,size,d0):
 		"""
@@ -513,8 +515,9 @@ class PolygonSection():
 			size：核心混凝土纤维尺寸
 			d0：保护层厚度
 		返回：
-
+			coverFiberInfo:保护层混凝土纤维单元[(xc1,yc1,area1),(xc2,yc2,area2)]
 		"""
+		coverFiberInfo=None
 		nodeOutDict=self.outNode
 		eleOutDict=self.outEle
 		nodeNewOutDict=self.outNewNodeDict# 新生成的外侧保护层混凝土线节点字典
@@ -522,6 +525,7 @@ class PolygonSection():
 		nodeInDict=self.inNode
 		eleInDict=self.inEle
 		fiberInfo,outNodeInfo,inNodeInfo=self._coverDivide(nodeOutDict,nodeNewOutDict,eleOutDict,size,d0)
+		coverFiberInfo=fiberInfo
 		outNodeInfo.append(outNodeInfo[0])
 		inNodeInfo.append(inNodeInfo[0])
 		xList=[]
@@ -549,6 +553,8 @@ class PolygonSection():
 			inareaList = []
 			for i4 in range(nInhole):
 				Innerfiber, innerOut, innerIn = self._coverDivide(nodeInDict[i4],nodeNewInDict[i4],eleInDict[i4], size,d0)
+				coverFiberInfo=coverFiberInfo+Innerfiber
+
 				innerOut.append(innerOut[0])
 				innerIn.append(innerIn[0])
 				for each2 in Innerfiber:
@@ -565,6 +571,7 @@ class PolygonSection():
 					self.ax.plot([innerOut[i7][0], innerOut[i7 + 1][0]],[innerOut[i7][1],innerOut[i7 + 1][1]],\
 								 self.coverColor,linewidth=self.lineWid,zorder = 0)
 			# self.ax.scatter(inxList,inyList,s=2,c="r")
+		return coverFiberInfo
 
 	def _barDivide(self,barD,barDist,nodeDict,lineEleDict):
 		"""
@@ -614,11 +621,14 @@ class PolygonSection():
 			inBarD：内轮廓钢筋直径
 			inBarDist：内轮廓钢筋间距
 		返回：
+			barFiberInfo:钢筋纤维单元信息[(xc1,yc1,area1),(xc2,yc2,area2)]
 		"""
+		barFiberInfo=None
 		outBarLineDict=self.outNewNodeDict  # 新生成的外侧保护层混凝土线节点字典
 		outBarListEle=self.outEle
 		#外侧钢筋的划分
 		outBarFiber,outXList,outYList=self._barDivide(outBarD,outBarDist,outBarLineDict,outBarListEle)
+		barFiberInfo=outBarFiber
 		self.ax.scatter(outXList,outYList,s=self.barMarkSize,c=self.barColor,linewidth=self.lineWid,zorder = 2)
 		if self.inNode != None:
 			inBarLineDict = self.inNewNodeDict  # 新生成的内侧保护层混凝土线节点字典列表
@@ -626,7 +636,9 @@ class PolygonSection():
 			nEle=len(inBarLineEle)
 			for i1 in range(nEle):
 				inBarFiber, inXList, inYList = self._barDivide(inBarD, inBarDist, inBarLineDict[i1], inBarLineEle[i1])
+				barFiberInfo=barFiberInfo+inBarFiber
 				self.ax.scatter(inXList, inYList, s=self.barMarkSize, c=self.barColor,linewidth=self.lineWid, zorder=2)
+		return barFiberInfo
 
 
 class CircleSection():
@@ -655,21 +667,51 @@ class CircleSection():
 			inyList=(self.inD/2.0)*np.sin(theta)
 			self.ax.plot(inxList,inyList,"r",linewidth=1,zorder=2)
 
+	def _triEleInfo(self,nodeNArray,eleNArray):
+		"""
+		计算生成的三角纤维单元的面积与形心坐标
+		输入：
+			nodeNArray:节点坐标列表[[x1,y1],[x2,y2]]
+			eleNArray:单元列表[[I1,J1,K1],[I2,J2,K2]
+		返回：
+			inFoList:纤维单元信息列表[(xc1,yc1,area1),(xc2,yc2,area2)]
+		"""
+		inFoList=[]
+		for each in eleNArray:
+			I,J,K=each[0],each[1],each[2]
+			x1=nodeNArray[I][0]
+			y1 = nodeNArray[I][1]
+			x2 = nodeNArray[J][0]
+			y2 = nodeNArray[J][1]
+			x3 = nodeNArray[K][0]
+			y3 = nodeNArray[K][1]
+			area=0.5*(x1*y2-x2*y1+x2*y3-x3*y2+x3*y1-x1*y3)
+			xc=(x1+x2+x3)/3.0
+			yc=(y1+y2+y3)/3.0
+			inFoList.append((xc,yc,area))
+		return inFoList
+
 	def coreMesh(self,eleSize):
 		"""
 		核心混凝土的划分
-		eleSize-核心区纤维单元大小
+		输入：
+			eleSize：核心区纤维单元大小
+		返回：
+			coreFiberInfo:核心混凝土纤维单元列表[(xc1,yc1,area1),(xc2,yc2,area2)]
 		"""
 		outDNew=self.outD-self.d0*2.0
 		if self.inD!=None:
 			inDNew=self.inD+self.d0*2.0
 			geo = dmsh.Difference(dmsh.Circle([0, 0], outDNew/2.0), dmsh.Circle([0, 0.0],inDNew/2.0))
 			points, elements= dmsh.generate(geo, eleSize)
+			coreFiberInfo=self._triEleInfo(points,elements)
 			self.ax.triplot(points[:, 0], points[:, 1], elements)
 		else:
 			geo = dmsh.Circle([0.0, 0.0],outDNew/2.0)
 			points, elements = dmsh.generate(geo,eleSize)
+			coreFiberInfo = self._triEleInfo(points, elements)
 			self.ax.triplot(points[:, 0], points[:, 1], elements)
+		return coreFiberInfo
 
 	def _coverDivide(self,coverSize,pos="out"):
 		"""
@@ -711,10 +753,14 @@ class CircleSection():
 	def coverMesh(self,coverSize):
 		"""
 		保护层混凝土的划分
-		coverSize-保护层混凝土单元的大小
+		输入：
+			coverSize：保护层混凝土单元的大小
+		返回：
+			coverFiberInfo：保护层 混凝土纤维列表[(xc1,yc1,area1),(xc2,yc2,area2)]
 		"""
+		coverFiberInfo=None
 		outCoverFiberInfo,outFiberXList,outFiberYList,outNodeList,outNewNodeList=self._coverDivide(coverSize, pos="out")
-
+		coverFiberInfo=outCoverFiberInfo
 		outDNew=self.outD-2.0*self.d0
 		theta = np.arange(0, 2 * np.pi, 0.01)
 		outThetaX=(outDNew/2.0)*np.cos(theta)
@@ -729,6 +775,7 @@ class CircleSection():
 			inDNew = self.inD + 2.0 * self.d0
 			inCoverFiberInfo, inFiberXList, inFiberYList, inNodeList, inNewNodeList\
 				= self._coverDivide(coverSize, pos="in")
+			coverFiberInfo=coverFiberInfo+inCoverFiberInfo
 			inThetaX = (inDNew / 2.0) * np.cos(theta)
 			inThetaY = (inDNew / 2.0) * np.sin(theta)
 			self.ax.plot(inThetaX, inThetaY, "r", linewidth=1, zorder=2)
@@ -737,6 +784,7 @@ class CircleSection():
 				xList = [inNodeList[i5][0], inNewNodeList[i5][0]]
 				yList = [inNodeList[i5][1], inNewNodeList[i5][1]]
 				self.ax.plot(xList, yList, "r", linewidth=1, zorder=2)
+		return coverFiberInfo
 
 	def _barDivide(self,barD,barDist,pos="out"):
 		"""
@@ -760,17 +808,23 @@ class CircleSection():
 	def barMesh(self,outBarD,outBarDist,inBarD=None,inBarDist=None):
 		"""
 		纵筋的纤维划分
-		outBarD-外轮廓纵筋的直径
-		outBarDist-外轮廓纵筋的间距
-		inBarD-内轮廓纵筋的直径
-		inBarDist-内轮廓纵筋的间距
+		输入：
+			outBarD：外轮廓纵筋的直径
+			outBarDist：外轮廓纵筋的间距
+			inBarD：内轮廓纵筋的直径
+			inBarDist:内轮廓纵筋的间距
+		返回:
+			barFiberInfo:纵筋纤维列表[(xc1,yc1,area1),(xc2,yc2,area2)]
 		"""
+		barFiberInfo=None
 		outFiberInfo,outFiberXList,outFiberYList=self._barDivide(outBarD, outBarDist, pos="out")
+		barFiberInfo=outFiberInfo
 		self.ax.scatter(outFiberXList,outFiberYList,s=10,c="k",zorder = 3)
 		if self.inD!=None:
 			inFiberInfo, inFiberXList, inFiberYList = self._barDivide(inBarD, inBarDist, pos="in")
+			barFiberInfo=barFiberInfo+inFiberInfo
 			self.ax.scatter(inFiberXList, inFiberYList, s=15, c="k", zorder=3)
-
+		return barFiberInfo
 
 if __name__=="__main__":
 	#########---多边形截面内有一个洞---####################################################
@@ -801,52 +855,87 @@ if __name__=="__main__":
 	# inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)},{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}]
 	######################################################################################
 	#########---多边形截面内有两个洞（y向）--###############################################
-	outSideNode = {1: (-5, -5), 2: (5, -5), 3: (5, 5), 4: (-5, 5)}
-	outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}
-	inSideNode = [{1: (-3, -3), 2: (-1, -3), 3: (-1, 3), 4: (-3, 3)}, {1: (1, -3), 2: (3, -3), 3: (3, 3), 4: (1, 3)}]
-	inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}, {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}]
+	# outSideNode = {1: (-5, -5), 2: (5, -5), 3: (5, 5), 4: (-5, 5)}
+	# outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}
+	# inSideNode = [{1: (-3, -3), 2: (-1, -3), 3: (-1, 3), 4: (-3, 3)}, {1: (1, -3), 2: (3, -3), 3: (3, 3), 4: (1, 3)}]
+	# inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}, {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}]
 	######################################################################################
-	fig = plt.figure(figsize=(5, 5))
-	ax = fig.add_subplot(111)
-	d0 = 0.06  # 保护层厚度
-	eleSize = 0.2  # 核心纤维的大小
-	coverSize = 0.3  # 保护层纤维大小
-	outBarDist = 0.4
-	outBarD = 0.032
-	inBarDist = 0.4
-	inBarD = 0.032
-	sectInstance = PolygonSection(ax, outSideNode, outSideEle, inSideNode, inSideEle)
-	sectInstance.sectPlot()
-	outLineList = sectInstance.coverLinePlot(d0)
-	inLineList = sectInstance.innerLinePlot(d0)
-	sectInstance.coreMesh(eleSize, outLineList, inLineList)
-	sectInstance.coverMesh(coverSize, d0)
-	sectInstance.barMesh(outBarD, outBarDist, inBarD, inBarDist)
-	plt.show()
+	# fig = plt.figure(figsize=(5, 5))
+	# ax = fig.add_subplot(111)
+	# d0 = 0.06  # 保护层厚度
+	# eleSize = 0.2  # 核心纤维的大小
+	# coverSize = 0.3  # 保护层纤维大小
+	# outBarDist = 0.4
+	# outBarD = 0.032
+	# inBarDist = 0.4
+	# inBarD = 0.032
+	# sectInstance = PolygonSection(ax, outSideNode, outSideEle, inSideNode, inSideEle)
+	# sectInstance.sectPlot()
+	# outLineList = sectInstance.coverLinePlot(d0)
+	# inLineList = sectInstance.innerLinePlot(d0)
+	# coreFiber=sectInstance.coreMesh(eleSize, outLineList, inLineList)
+	# coverFiber=sectInstance.coverMesh(coverSize, d0)
+	# barFiber=sectInstance.barMesh(outBarD, outBarDist, inBarD, inBarDist)
+	# # plt.show()
+	#
+	# fig1 = plt.figure(figsize=(5, 5))
+	# ax1 = fig1.add_subplot(111)
+	# coreFiberXList=[each1[0] for each1 in coreFiber]
+	# coreFiberYList = [each1[1] for each1 in coreFiber]
+	# coreFiberAreaList = [each1[2] for each1 in coreFiber]
+	# coverFiberXList = [each1[0] for each1 in coverFiber]
+	# coverFiberYList = [each1[1] for each1 in coverFiber]
+	# coverFiberAreaList = [each1[2] for each1 in coverFiber]
+	# barFiberXList = [each1[0] for each1 in barFiber]
+	# barFiberYList = [each1[1] for each1 in barFiber]
+	# barFiberAreaList = [each1[2] for each1 in barFiber]
+	#
+	# ax1.scatter(coreFiberXList, coreFiberYList, s=5, c="k", zorder=3)
+	# ax1.scatter(coverFiberXList, coverFiberYList, s=5, c="k", zorder=3)
+	# ax1.scatter(barFiberXList, barFiberYList, s=5, c="k", zorder=3)
+	# plt.show()
+
 
 
 ######################################################################################
 	#########################################---圆形截面---################################
 	####实心截面,逆时针
-	# fig = plt.figure(figsize=(5,5))
-	# ax = fig.add_subplot(111)
-	# outbarD=0.03 #纵向钢筋直径
-	# outbarDist=0.15 #纵向钢筋间距
-	# inBarD=0.03
-	# inBarDist=0.15
-	# d0=0.1 #保护层混凝土厚度
-	# eleSize=0.15  #核心纤维的大小
-	# coverSize=0.15 #保护层纤维大小
-	# outD=3 #截面外圆直径
-	# inD=1
-	#
-	# circleInstance=CircleSection(ax,d0,outD)
-	# circleInstance.sectPlot()
-	# circleInstance.coreMesh(eleSize)
-	# circleInstance.coverMesh(coverSize)
-	# circleInstance.barMesh(outbarD, outbarDist)
-	#
+	fig = plt.figure(figsize=(5,5))
+	ax = fig.add_subplot(111)
+	outbarD=0.03 #纵向钢筋直径
+	outbarDist=0.15 #纵向钢筋间距
+	inBarD=0.03
+	inBarDist=0.15
+	d0=0.1 #保护层混凝土厚度
+	eleSize=0.15  #核心纤维的大小
+	coverSize=0.15 #保护层纤维大小
+	outD=3 #截面外圆直径
+	inD=1
+
+	circleInstance=CircleSection(ax,d0,outD,inD)
+	circleInstance.sectPlot()
+	coreFiber=circleInstance.coreMesh(eleSize)
+	coverFiber=circleInstance.coverMesh(coverSize)
+	barFiber=circleInstance.barMesh(outbarD, outbarDist,inD,inBarDist)
+
 	# plt.show()
+
+	fig1 = plt.figure(figsize=(5, 5))
+	ax1 = fig1.add_subplot(111)
+	coreFiberXList=[each1[0] for each1 in coreFiber]
+	coreFiberYList = [each1[1] for each1 in coreFiber]
+	coreFiberAreaList = [each1[2] for each1 in coreFiber]
+	coverFiberXList = [each1[0] for each1 in coverFiber]
+	coverFiberYList = [each1[1] for each1 in coverFiber]
+	coverFiberAreaList = [each1[2] for each1 in coverFiber]
+	barFiberXList = [each1[0] for each1 in barFiber]
+	barFiberYList = [each1[1] for each1 in barFiber]
+	barFiberAreaList = [each1[2] for each1 in barFiber]
+
+	# ax1.scatter(coreFiberXList, coreFiberYList, s=5, c="k", zorder=3)
+	# ax1.scatter(coverFiberXList, coverFiberYList, s=5, c="k", zorder=3)
+	ax1.scatter(barFiberXList, barFiberYList, s=5, c="k", zorder=3)
+	plt.show()
 
 
 
