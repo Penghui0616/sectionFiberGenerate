@@ -382,6 +382,30 @@ class PolygonSection():
 			list2.append((0, outmax))
 		return list1,list2
 
+	def _triEleInfo(self,nodeNArray,eleNArray):
+		"""
+		计算生成的三角纤维单元的面积与形心坐标
+		输入：
+			nodeNArray:节点坐标列表[[x1,y1],[x2,y2]]
+			eleNArray:单元列表[[I1,J1,K1],[I2,J2,K2]
+		返回：
+			inFoList:纤维单元信息列表[(xc1,yc1,area1),(xc2,yc2,area2)]
+		"""
+		inFoList=[]
+		for each in eleNArray:
+			I,J,K=each[0],each[1],each[2]
+			x1=nodeNArray[I][0]
+			y1 = nodeNArray[I][1]
+			x2 = nodeNArray[J][0]
+			y2 = nodeNArray[J][1]
+			x3 = nodeNArray[K][0]
+			y3 = nodeNArray[K][1]
+			area=0.5*(x1*y2-x2*y1+x2*y3-x3*y2+x3*y1-x1*y3)
+			xc=(x1+x2+x3)/3.0
+			yc=(y1+y2+y3)/3.0
+			inFoList.append((xc,yc,area))
+		return inFoList
+
 	def coreMesh(self,eleSize,outLineList,inLineList=None):
 		"""
 		核心混凝土的划分
@@ -391,6 +415,7 @@ class PolygonSection():
 			inLineList:内分界线节点列表[[(x1,y1),(x2,y2),...,(xn,yn)],[(x1,y1),(x2,y2),...,(xn,yn)]]
 		返回：
 		"""
+		triEleInfoList=None
 		if inLineList==None:
 			geo=dmsh.Polygon(outLineList)
 			points, elements = dmsh.generate(geo, eleSize)
@@ -410,8 +435,13 @@ class PolygonSection():
 			geo2 = dmsh.Polygon(list2)
 			points1, elements1 = dmsh.generate(geo1, eleSize)
 			points2, elements2 = dmsh.generate(geo2, eleSize)
+			triEleInfoList1=self._triEleInfo(points1,elements1)
+			triEleInfoList2 = self._triEleInfo(points2, elements2)
+			triEleInfoList=triEleInfoList1+triEleInfoList2
 			self.ax.triplot(points1[:, 0], points1[:, 1], elements1,c=self.coreColor,linewidth=self.lineWid,zorder = 0)
 			self.ax.triplot(points2[:, 0], points2[:, 1], elements2, c=self.coreColor,linewidth=self.lineWid,zorder=0)
+		area=sum([each[2] for each in triEleInfoList])
+		print(area)
 
 	def _coverDivide(self,outNodeDict,inNodeDict,eleDict,size,d0):
 		"""
@@ -771,52 +801,52 @@ if __name__=="__main__":
 	# inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)},{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}]
 	######################################################################################
 	#########---多边形截面内有两个洞（y向）--###############################################
-	# outSideNode = {1: (-5, -5), 2: (5, -5), 3: (5, 5), 4: (-5, 5)}
-	# outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}
-	# inSideNode = [{1: (-3, -3), 2: (-1, -3), 3: (-1, 3), 4: (-3, 3)}, {1: (1, -3), 2: (3, -3), 3: (3, 3), 4: (1, 3)}]
-	# inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}, {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}]
+	outSideNode = {1: (-5, -5), 2: (5, -5), 3: (5, 5), 4: (-5, 5)}
+	outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}
+	inSideNode = [{1: (-3, -3), 2: (-1, -3), 3: (-1, 3), 4: (-3, 3)}, {1: (1, -3), 2: (3, -3), 3: (3, 3), 4: (1, 3)}]
+	inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}, {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 1)}]
 	######################################################################################
-	# fig = plt.figure(figsize=(5, 5))
-	# ax = fig.add_subplot(111)
-	# d0 = 0.06  # 保护层厚度
-	# eleSize = 0.2  # 核心纤维的大小
-	# coverSize = 0.3  # 保护层纤维大小
-	# outBarDist = 0.4
-	# outBarD = 0.032
-	# inBarDist = 0.4
-	# inBarD = 0.032
-	# sectInstance = PolygonSection(ax, outSideNode, outSideEle, inSideNode, inSideEle)
-	# sectInstance.sectPlot()
-	# outLineList = sectInstance.coverLinePlot(d0)
-	# inLineList = sectInstance.innerLinePlot(d0)
-	# sectInstance.coreMesh(eleSize, outLineList, inLineList)
-	# sectInstance.coverMesh(coverSize, d0)
-	# sectInstance.barMesh(outBarD, outBarDist, inBarD, inBarDist)
-	# plt.show()
+	fig = plt.figure(figsize=(5, 5))
+	ax = fig.add_subplot(111)
+	d0 = 0.06  # 保护层厚度
+	eleSize = 0.2  # 核心纤维的大小
+	coverSize = 0.3  # 保护层纤维大小
+	outBarDist = 0.4
+	outBarD = 0.032
+	inBarDist = 0.4
+	inBarD = 0.032
+	sectInstance = PolygonSection(ax, outSideNode, outSideEle, inSideNode, inSideEle)
+	sectInstance.sectPlot()
+	outLineList = sectInstance.coverLinePlot(d0)
+	inLineList = sectInstance.innerLinePlot(d0)
+	sectInstance.coreMesh(eleSize, outLineList, inLineList)
+	sectInstance.coverMesh(coverSize, d0)
+	sectInstance.barMesh(outBarD, outBarDist, inBarD, inBarDist)
+	plt.show()
 
 
 ######################################################################################
 	#########################################---圆形截面---################################
 	####实心截面,逆时针
-	fig = plt.figure(figsize=(5,5))
-	ax = fig.add_subplot(111)
-	outbarD=0.03 #纵向钢筋直径
-	outbarDist=0.15 #纵向钢筋间距
-	inBarD=0.03
-	inBarDist=0.15
-	d0=0.1 #保护层混凝土厚度
-	eleSize=0.15  #核心纤维的大小
-	coverSize=0.15 #保护层纤维大小
-	outD=3 #截面外圆直径
-	inD=1
-
-	circleInstance=CircleSection(ax,d0,outD)
-	circleInstance.sectPlot()
-	circleInstance.coreMesh(eleSize)
-	circleInstance.coverMesh(coverSize)
-	circleInstance.barMesh(outbarD, outbarDist)
-
-	plt.show()
+	# fig = plt.figure(figsize=(5,5))
+	# ax = fig.add_subplot(111)
+	# outbarD=0.03 #纵向钢筋直径
+	# outbarDist=0.15 #纵向钢筋间距
+	# inBarD=0.03
+	# inBarDist=0.15
+	# d0=0.1 #保护层混凝土厚度
+	# eleSize=0.15  #核心纤维的大小
+	# coverSize=0.15 #保护层纤维大小
+	# outD=3 #截面外圆直径
+	# inD=1
+	#
+	# circleInstance=CircleSection(ax,d0,outD)
+	# circleInstance.sectPlot()
+	# circleInstance.coreMesh(eleSize)
+	# circleInstance.coverMesh(coverSize)
+	# circleInstance.barMesh(outbarD, outbarDist)
+	#
+	# plt.show()
 
 
 
