@@ -1,30 +1,6 @@
-```python
-from fiberGenerate import PolygonSection
-import matplotlib.pyplot as plt
-outSideNode={1:(3.5,3),2:(1.5,5),3:(-1.5,5),4:(-3.5,3),5:(-3.5,-3),6:(-1.5,-5),7:(1.5,-5),8:(3.5,-3)}
-outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}
-inSideNode=[{1:(1.9,2.4),2:(1.1,3.2),3:(-1.1,3.2),4:(-1.9,2.4),5:(-1.9,-2.4),6:(-1.1,-3.2),7:(1.1,-3.2),8:(1.9,-2.4)}]
-inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}]
-fig = plt.figure(figsize=(5, 5))
-ax = fig.add_subplot(111)
-d0 = 0.06  # the thinck of the cover concrete
-coreSize = 0.2  # the size of the core concrete fiber elements
-coverSize = 0.3  # the size of the cover concrete fiber elements
-outBarDist = 0.2 # outside bar space 
-outBarD = 0.032 # outside bar diameter
-inBarD=0.032
-inBarDist=0.2
-sectInstance = PolygonSection(ax, outSideNode, outSideEle,inSideNode,inSideEle)
-sectInstance.sectPlot()
-outLineList = sectInstance.coverLinePlot(d0)
-inLineList = sectInstance.innerLinePlot(d0)
-coreFiber=sectInstance.coreMesh(coreSize, outLineList,inLineList)
-coverFiber=sectInstance.coverMesh(coverSize, d0)
-barFiber=sectInstance.barMesh(outBarD, outBarDist,inBarDist,outBarDist)
-plt.show()
-```# sectionFiberGenerate
 Generate sectional fibers based on python programming
 ## Circle section fiber generate
+
 <img src="https://github.com/Junjun1guo/sectionFiberGenerate/raw/master/circle.png" width =40% height =40% div align="center">
 
 ```python
