@@ -19,7 +19,7 @@ outD=3 #the diameter of the outside circle
 inD=1 # the diameter of the inner circle
 
 circleInstance=CircleSection(ax,d0,outD,inD) #call the circle section generate class
-circleInstance.sectPlot() #plot the profile of the circle
+circleInstance.sectPlot() #plot profile of the circle
 coreFiber=circleInstance.coreMesh(eleSize) #generate core concrete fiber elements
 coverFiber=circleInstance.coverMesh(coverSize) #generate cover concrete fiber elements
 barFiber=circleInstance.barMesh(outbarD, outbarDist,inD,inBarDist) #generate the bar fiber elements
