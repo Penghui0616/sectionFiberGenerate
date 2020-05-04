@@ -14,7 +14,7 @@ import time
 import pygmsh
 import meshio
 import matplotlib.tri as tri
-from pointInPolygon import isin_multipolygon
+from pointInPolygon import is_in_2d_polygon
 import io
 import sys
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer,encoding='utf8') #set standard output default encoding
@@ -35,8 +35,44 @@ class CircleSection():
           outD-outside diameter (m)
           inD-inner diameter (m)
           if inD==None,the section is solid circle, otherwise is torus
+    #######################---solid section circle example---#########################
+    from fiberGenerate import CircleSection
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(5, 5))
+    ax = fig.add_subplot(111)
+    outbarD = 0.03  # outside bar diameter
+    outbarDist = 0.15  # outside bar space
+    d0 = 0.06  # the thinckness of the cover concrete
+    eleSize = 0.15  # the size of core concrete fiber
+    coverSize = 0.15  # the size of cover concrete fiber
+    outD = 3  # the diameter of the outside circle
+    circleInstance = CircleSection(ax, d0, outD)  # call the circle section generate class
+    circleInstance.initSectionPlot()  # plot profile of the circle
+    coreFiber = circleInstance.coreMesh(eleSize)  # generate core concrete fiber elements [(x1,y1,area1),...]
+    coverFiber = circleInstance.coverMesh(coverSize)  # generate cover concrete fiber elements [(x1,y1,area1),...]
+    barFiber = circleInstance.barMesh(outbarD, outbarDist)  # generate the bar fiber elements [(x1,y1,area1),...]
+    plt.show()
+    #######################---torus section example---#########################
+    from fiberGenerate import CircleSection
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(5, 5))
+    ax = fig.add_subplot(111)
+    outbarD = 0.03  # outside bar diameter
+    outbarDist = 0.15  # outside bar space
+    inBarD = 0.03  # inside bar diameter
+    inBarDist = 0.15  # inside bar space
+    d0 = 0.1  # the thinckness of the cover concrete
+    coreSize = 0.15  # the size of core concrete fiber
+    coverSize = 0.15  # the size of cover concrete fiber
+    outD = 3  # the diameter of the outside circle
+    inD = 1  # the diameter of the inner circle
+    circleInstance = CircleSection(ax, d0, outD, inD)  # call the circle section generate class
+    circleInstance.initSectionPlot()  # plot profile of the circle
+    coreFiber = circleInstance.coreMesh(coreSize)  # generate core concrete fiber elements
+    coverFiber = circleInstance.coverMesh(coverSize)  # generate cover concrete fiber elements
+    barFiber = circleInstance.barMesh(outbarD, outbarDist, inBarD, inBarDist)  # generate the bar fiber elements
+    plt.show()
     """
-
     ####################################################
     def __init__(self, ax, d0, outD, inD=None):
         """
@@ -200,11 +236,12 @@ class CircleSection():
         Input：barD-bar diameter (m)
              barDist-bar space (m)
         """
+        newR=None
         area = (np.pi * barD ** 2) / 4.0
         if pos == "out":
             newR = (self.outDiameter - 2.0 * self.coverThick) / 2.0-barD/2.0
         elif pos == "in":
-            newR = (self.innerDiameter + 2 * self.coverThick) / 2.0+barD/2.0
+            newR = (self.innerDiameter + 2.0 * self.coverThick)/2.0 +barD/2.0
         circumLength = 2 * np.pi * newR
         nBar = int(circumLength / barDist)
         angle = (2 * np.pi) / nBar
@@ -231,13 +268,97 @@ class CircleSection():
         if self.innerDiameter != None:
             inFiberInfo, inFiberXList, inFiberYList = self._barDivide(inBarD, inBarDist, pos="in")
             barFiberInfo = barFiberInfo + inFiberInfo
-            self.ax.scatter(inFiberXList, inFiberYList, s=15, c="k", zorder=3)
+            self.ax.scatter(inFiberXList, inFiberYList, s=10, c="k", zorder=3)
         return barFiberInfo
 ########################################################################################################################
 ########################################################################################################################
 class PolygonSection():
     """
 	Polygon section fiber mesh (bar, core conrete and cover concrete)
+	###########################---Polygon section example---######################################
+    from fiberGenerate import PolygonSection
+    from fiberGenerate import figureSize
+    import matplotlib.pyplot as plt
+    outSideNode = {1: (3.5, 3), 2: (1.5, 5), 3: (-1.5, 5), 4: (-3.5, 3), 5: (-3.5, -3), 6: (-1.5, -5), 7: (1.5, -5),
+                   8: (3.5, -3)}
+    outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}
+    w, h = figureSize(outSideNode)
+    fig = plt.figure(figsize=(w,h))
+    ax = fig.add_subplot(111)
+    coverThick = 0.06  # the thinck of the cover concrete
+    coreSize = 0.2  # the size of the core concrete fiber elements
+    coverSize = 0.3  # the size of the cover concrete fiber elements
+    outBarDist = 0.2  # outside bar space
+    outBarD = 0.032  # outside bar diameter
+    sectInstance = PolygonSection(ax, outSideNode, outSideEle)
+    sectInstance.sectPlot()
+    outLineList = sectInstance.coverLinePlot(coverThick)
+    coreFiber = sectInstance.coreMesh(coreSize, outLineList)
+    coverFiber = sectInstance.coverMesh(coverSize, coverThick)
+    barFiber = sectInstance.barMesh(outBarD, outBarDist,coverThick)
+    plt.show()
+    ###########################---PolygonHole section example---######################################
+    from fiberGenerate import PolygonSection
+    from fiberGenerate import figureSize
+    import matplotlib.pyplot as plt
+    outSideNode = {1: (3.5, 3), 2: (1.5, 5), 3: (-1.5, 5), 4: (-3.5, 3), 5: (-3.5, -3), 6: (-1.5, -5), 7: (1.5, -5),
+                   8: (3.5, -3)}
+    outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}
+    inSideNode = [
+        {1: (1.9, 2.4), 2: (1.1, 3.2), 3: (-1.1, 3.2), 4: (-1.9, 2.4), 5: (-1.9, -2.4), 6: (-1.1, -3.2), 7: (1.1, -3.2),
+         8: (1.9, -2.4)}]
+    inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}]
+    w,h=figureSize(outSideNode)
+    fig = plt.figure(figsize=(w,h))
+    ax = fig.add_subplot(111)
+    coverThick = 0.06  # the thinck of the cover concrete
+    coreSize = 0.2  # the size of the core concrete fiber elements
+    coverSize = 0.3  # the size of the cover concrete fiber elements
+    outBarDist = 0.2  # outside bar space
+    outBarD = 0.032  # outside bar diameter
+    inBarD = 0.032
+    inBarDist = 0.2
+    sectInstance = PolygonSection(ax, outSideNode, outSideEle, inSideNode, inSideEle)
+    sectInstance.sectPlot()
+    outLineList = sectInstance.coverLinePlot(coverThick)
+    inLineList = sectInstance.innerLinePlot(coverThick)
+    coreFiber = sectInstance.coreMesh(coreSize, outLineList, inLineList)
+    coverFiber = sectInstance.coverMesh(coverSize, coverThick)
+    barFiber = sectInstance.barMesh(outBarD, outBarDist,coverThick, inBarD, inBarDist)
+    plt.show()
+    ###########################---PolygonTwoHole section example---######################################
+    from fiberGenerate import PolygonSection
+    from figerGenerate import figureSize
+    import matplotlib.pyplot as plt
+
+    outSideNode = {1: (4.5, 6.655), 2: (2.5, 8.655), 3: (-2.5, 8.655), 4: (-4.5, 6.655), 5: (-4.5, -6.655),
+                   6: (-2.5, -8.655), 7: (2.5, -8.655),
+                   8: (4.5, -6.655)}
+    outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}
+    inSideNode = [{1: (2.5, 5.855), 2: (1.7, 6.655), 3: (-1.7, 6.655), 4: (-2.5, 5.855), 5: (-2.5, 1.3), 6: (-1.7, 0.5),
+                   7: (1.7, 0.5), 8: (2.5, 1.3)},
+                  {1: (2.5, -1.3), 2: (1.7, -0.5), 3: (-1.7, -0.5), 4: (-2.5, -1.3), 5: (-2.5, -5.855),
+                   6: (-1.7, -6.655), 7: (1.7, -6.655), 8: (2.5, -5.855)}]
+    inSideEle = [{1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)},
+                 {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (5, 6), 6: (6, 7), 7: (7, 8), 8: (8, 1)}]
+    w,h=figureSize(outSideNode)
+    fig = plt.figure(figsize=(w,h))
+    ax = fig.add_subplot(111)
+    coverThick = 0.06  # the thinck of the cover concrete
+    coreSize = 0.2  # the size of the core concrete fiber elements
+    coverSize = 0.3  # the size of the cover concrete fiber elements
+    outBarDist = 0.2  # outside bar space
+    outBarD = 0.032  # outside bar diameter
+    inBarD = 0.032
+    inBarDist = 0.2
+    sectInstance = PolygonSection(ax, outSideNode, outSideEle, inSideNode, inSideEle)
+    sectInstance.sectPlot()
+    outLineList = sectInstance.coverLinePlot(coverThick)
+    inLineList = sectInstance.innerLinePlot(coverThick)
+    coreFiber = sectInstance.coreMesh(coreSize, outLineList, inLineList)
+    coverFiber = sectInstance.coverMesh(coverSize, coverThick)
+    barFiber = sectInstance.barMesh(outBarD, outBarDist,coverThick, inBarD, inBarDist)
+    plt.show()
     """
 
     def __init__(self, ax, outNode, outEle, inNode=None, inEle=None):
@@ -339,34 +460,20 @@ class PolygonSection():
             self.inNewNodeDict = innerListDict
             return innerList
     ####################################################
-    def _polygonInnerPoint(self,nodeDict):
+    def _pointToLineD(self,a,b,c,nodeIx,nodeIy,nodeJx,nodeJy):
         """
-        得到封闭多边形内一点坐标
-        输入: nodeDict-节点字典 {1:(2.3,4.3)}
-        输出：InNode-内部一个节点坐标[(xi,yi)]
+        得到一条线段垂直中线距线段距离为d的点的坐标
+        输入: a,b,c直线一般方程系数 ax+by+c=0
+              nodeIx,nodeIy,nodeJx,nodeJy-线段I,J段节点坐标
+        输出：newNode-直线外一点坐标[(xi,yi)]
         """
-        nodeValues = list(nodeDict.values())
-        nodeValues.append(nodeValues[0])
-        nodeValuesX = [each1[0] for each1 in nodeValues]
-        nodeValuesY = [each1[1] for each1 in nodeValues]
-        setNodeValuesX = set(nodeValuesX)
-        setNodeValuesY = set(nodeValuesY)
-        setNodexList = list(setNodeValuesX)
-        setNodeyList = list(setNodeValuesY)
-        setNodexList.sort(reverse=False)
-        setNodeyList.sort(reverse=False)
-        xMiddleList = [0.5 * (setNodexList[i1] + setNodexList[i1 + 1]) for i1 in range(len(setNodexList) - 1)]
-        yMiddleList = [0.5 * (setNodeyList[i2] + setNodeyList[i2 + 1]) for i2 in range(len(setNodeyList) - 1)]
-        possibleInPoints = [(x1, y1) for x1 in xMiddleList for y1 in yMiddleList]
-        innerPoint = None
-        for each1 in possibleInPoints:
-            returnIndex = isin_multipolygon(each1, nodeValues, contain_boundary=False)
-            if returnIndex == True:
-                innerPoint = each1
-                break
-            else:
-                continue
-        return innerPoint
+        a1,b1,c1=a,b,c
+        c22=(a*0.5*(nodeIy+nodeJy)-b*0.5*(nodeIx+nodeJx))
+        a2,b2,c2=b,-a,c22
+        A = np.array([[a1, b1], [a2, b2]])
+        B = np.array([-c1, -c2])
+        newNode = list(solve(A, B))
+        return newNode
     ####################################################
     def _pointToLineDist(self,a,b,c,innerPointCoord):
         """
@@ -381,15 +488,16 @@ class PolygonSection():
         d=np.abs((a*x0+b*y0+c))/float(math.sqrt(a**2+b**2))
         return d
     ####################################################
-    def _interNodeCoord(self,nodeDict,coverThick,pos,innerNode):
+    def _interNodeCoord(self,nodeDict,coverThick,pos):
         """
         计算多边形整体缩放后的交点坐标
         输入:nodeDict-节点字典 {1:(2.3,4.3)}
              coverThick-保护层厚度
              pos-外侧分界线（"outLine"),内侧分界线("innerLine")
-             innerNode-封闭多边形内一点 [(x1,y1)]
         输出：NodeList-新节点坐标列表 [(x1,y1),(x2,y2),...,(xn,yn)]
         """
+        closedNodeValues = list(nodeDict.values())
+        closedNodeValues.append(closedNodeValues[0])   #闭合多边形节点坐标[(x0,y0),(x1,y1),...,(x0,y0)]
         NodeKeys = list(nodeDict.keys())
         NodeKeys.append(NodeKeys[0])
         NodeKeys.append(NodeKeys[1])
@@ -414,16 +522,17 @@ class PolygonSection():
             c1_2 = c1 + math.sqrt(a1 ** 2 + b1 ** 2) * coverThick
             c2_1 = c2 - math.sqrt(a2 ** 2 + b2 ** 2) * coverThick
             c2_2 = c2 + math.sqrt(a2 ** 2 + b2 ** 2) * coverThick
-            d1_1=self._pointToLineDist(a1,b1,c1_1,innerNode) #计算点到直线距离
-            d1_2=self._pointToLineDist(a1,b1,c1_2,innerNode)
-            d2_1 = self._pointToLineDist(a2, b2, c2_1, innerNode)  # 计算点到直线距离
-            d2_2 = self._pointToLineDist(a2, b2, c2_2, innerNode)
+
+            nodeD1_1=self._pointToLineD(a1,b1,c1_1,nodeIx,nodeIy,nodeJx,nodeJy)
+            D1_1Index=is_in_2d_polygon(nodeD1_1,closedNodeValues)
+            nodeD2_1 = self._pointToLineD(a2,b2,c2_1,nodeJx,nodeJy,nodeKx,nodeKy)
+            D2_1Index = is_in_2d_polygon(nodeD2_1, closedNodeValues)
             if pos == "outLine":
-                c11 = c1_1 if abs(d1_1) < abs(d1_2) else c1_2
-                c22 = c2_1 if abs(d2_1) < abs(d2_2) else c2_2
+                c11 = c1_1 if D1_1Index==True else c1_2
+                c22 = c2_1 if D2_1Index==True else c2_2
             elif pos == "innerLine":
-                c11 = c1_1 if abs(d1_1) > abs(d1_2) else c1_2
-                c22 = c2_1 if abs(d2_1) > abs(d2_2) else c2_2
+                c11 = c1_1 if D1_1Index==False else c1_2
+                c22 = c2_1 if D2_1Index==False else c2_2
             else:
                 print("Error!Please select outLine or innerLine mode!")
             A = np.array([[a1, b1], [a2, b2]])
@@ -444,8 +553,7 @@ class PolygonSection():
         返回：
             NodeList:外分界线节点列表[(x1,y1),(x2,y2),...,(xn,yn)]
         """
-        innerNodeCoord=self._polygonInnerPoint(nodeDict) #得到封闭多边形内一点坐标
-        newNodeList=self._interNodeCoord(nodeDict, coverThick, pos, innerNodeCoord)#计算多边形整体缩放后的交点坐标
+        newNodeList=self._interNodeCoord(nodeDict, coverThick, pos)#计算多边形整体缩放后的交点坐标
         return newNodeList
     ####################################################
     def _triEleInfo(self, nodeNArray, eleNArray):
@@ -750,7 +858,8 @@ def figureSize(outSideNode):
     h=np.abs(maxY-minY)
     return [w,h]
 ########################################################################################################################
-if __name__=="__main__":
+########################################################################################################################
+# if __name__=="__main__":
     # import meshio
     # mesh=pygmsh.generate_mesh(geom)
     # nodes=mesh.points
@@ -770,24 +879,24 @@ if __name__=="__main__":
 
     #######################---circle section---#########################################################################
     ####################################################################################################################
-    """
-    fig = plt.figure(figsize=(5, 5))
-    ax = fig.add_subplot(111)
-    outbarD = 0.03  # 纵向钢筋直径
-    outbarDist = 0.15  # 纵向钢筋间距
-    inBarD = 0.03
-    inBarDist = 0.15
-    coverThick = 0.1  # 保护层混凝土厚度
-    coreEleSize = 0.15  # 核心纤维的大小
-    coverEleSize = 0.15  # 保护层纤维大小
-    outDiameter = 3  # 截面外圆直径
-    innerDiameter = 1 #截面内圆直径
-    circleInstance = CircleSection(ax, coverThick, outDiameter)
-    circleInstance.initSectionPlot()
-    coreFiber=circleInstance.coreMesh(coreEleSize)
-    coverFiber = circleInstance.coverMesh(coverEleSize)
-    barFiber = circleInstance.barMesh(outbarD, outbarDist)
-    plt.show()
+
+    # fig = plt.figure(figsize=(5, 5))
+    # ax = fig.add_subplot(111)
+    # outbarD = 0.03  # 纵向钢筋直径
+    # outbarDist = 0.15  # 纵向钢筋间距
+    # inBarD = 0.03
+    # inBarDist = 0.15
+    # coverThick = 0.1  # 保护层混凝土厚度
+    # coreEleSize = 0.15  # 核心纤维的大小
+    # coverEleSize = 0.15  # 保护层纤维大小
+    # outDiameter = 3  # 截面外圆直径
+    # innerDiameter = 1 #截面内圆直径
+    # circleInstance = CircleSection(ax, coverThick, outDiameter)
+    # circleInstance.initSectionPlot()
+    # coreFiber=circleInstance.coreMesh(coreEleSize)
+    # coverFiber = circleInstance.coverMesh(coverEleSize)
+    # barFiber = circleInstance.barMesh(outbarD, outbarDist)
+    # plt.show()
 
     # fig1 = plt.figure(figsize=(5, 5))
     # ax1 = fig1.add_subplot(111)
@@ -804,7 +913,7 @@ if __name__=="__main__":
     # ax1.scatter(coverFiberXList, coverFiberYList, s=5, c="k", zorder=3)
     # ax1.scatter(barFiberXList, barFiberYList, s=5, c="k", zorder=3)
     # plt.show()
-    """
+
     #######################---polygon section---#########################################################################
     ####################################################################################################################
     # outSideNode = {1: (0, 0), 2: (7,0), 3: (7,3), 4: (0,3)}
@@ -849,8 +958,5 @@ if __name__=="__main__":
     # ax.scatter(coverFiberXList, coverFiberYList, s=5, c="k", zorder=3)
     # # ax.scatter(barFiberXList, barFiberYList, s=5, c="k", zorder=3)
     # plt.show()
-
-    print(help(CircleSection))
-
 
 
