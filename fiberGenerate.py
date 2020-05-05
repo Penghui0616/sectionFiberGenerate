@@ -18,13 +18,6 @@ from pointInPolygon import is_in_2d_polygon
 import io
 import sys
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer,encoding='utf8') #set standard output default encoding
-######################################################################################
-geom = pygmsh.opencascade.Geometry()
-disk0=geom.add_disk([1.5, 1.5, 0.0], 1,radius1=None,char_length=0.1)
-disk1 = geom.add_disk([1.5, 1.5, 0.0], 0.3,radius1=None,char_length=0.1)
-flat = geom.boolean_difference([disk0], [disk1])
-
-# geom.extrude(flat, [0, 0, 0])
 ########################################################################################################################
 ########################################################################################################################
 class CircleSection():
