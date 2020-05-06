@@ -852,44 +852,27 @@ def figureSize(outSideNode):
     return [w,h]
 ########################################################################################################################
 ########################################################################################################################
-# if __name__=="__main__":
-    # import meshio
-    # mesh=pygmsh.generate_mesh(geom)
-    # nodes=mesh.points
-    # cells=mesh.cells["triangle"]
-    # print(mesh.cells)
-    # meshio.write("opecsa.vtk",mesh)
-    #
-    # fig1, ax1 = plt.subplots()
-    # for each in cells:
-    #     nodeI,nodeJ,nodeK=each[0],each[1],each[2]
-    #     x=[nodes[nodeI][0],nodes[nodeJ][0],nodes[nodeK][0]]
-    #     y = [nodes[nodeI][1], nodes[nodeJ][1], nodes[nodeK][1]]
-    #     triang=tri.Triangulation(x,y)
-    #     ax1.set_aspect('equal')
-    #     ax1.triplot(triang, 'bo-', lw=1,ms=1)
-    # plt.show()
-
+if __name__=="__main__":
     #######################---circle section---#########################################################################
     ####################################################################################################################
 
-    # fig = plt.figure(figsize=(5, 5))
-    # ax = fig.add_subplot(111)
-    # outbarD = 0.03  # 纵向钢筋直径
-    # outbarDist = 0.15  # 纵向钢筋间距
-    # inBarD = 0.03
-    # inBarDist = 0.15
-    # coverThick = 0.1  # 保护层混凝土厚度
-    # coreEleSize = 0.15  # 核心纤维的大小
-    # coverEleSize = 0.15  # 保护层纤维大小
-    # outDiameter = 3  # 截面外圆直径
-    # innerDiameter = 1 #截面内圆直径
-    # circleInstance = CircleSection(ax, coverThick, outDiameter)
-    # circleInstance.initSectionPlot()
-    # coreFiber=circleInstance.coreMesh(coreEleSize)
-    # coverFiber = circleInstance.coverMesh(coverEleSize)
-    # barFiber = circleInstance.barMesh(outbarD, outbarDist)
-    # plt.show()
+    fig = plt.figure(figsize=(5, 5))
+    ax = fig.add_subplot(111)
+    outbarD = 0.03  # 纵向钢筋直径
+    outbarDist = 0.15  # 纵向钢筋间距
+    inBarD = 0.03
+    inBarDist = 0.15
+    coverThick = 0.1  # 保护层混凝土厚度
+    coreEleSize = 0.1  # 核心纤维的大小
+    coverEleSize = 0.15  # 保护层纤维大小
+    outDiameter = 20  # 截面外圆直径
+    innerDiameter = 1 #截面内圆直径
+    circleInstance = CircleSection(ax, coverThick, outDiameter,innerDiameter)
+    circleInstance.initSectionPlot()
+    coreFiber=circleInstance.coreMesh(coreEleSize)
+    coverFiber = circleInstance.coverMesh(coverEleSize)
+    barFiber = circleInstance.barMesh(outbarD, outbarDist,inBarD,inBarDist)
+    plt.show()
 
     # fig1 = plt.figure(figsize=(5, 5))
     # ax1 = fig1.add_subplot(111)
@@ -934,7 +917,7 @@ def figureSize(outSideNode):
     # coverFiber = sectInstance.coverMesh(coverEleSize, coverThick)
     # barFiber = sectInstance.barMesh(outBarD, outBarDist,coverThick, inBarD, inBarDist)
     #
-    # # plt.show()
+    # plt.show()
     # # ###########################################
     # # #fibers check
     # coreFiberXList=[each1[0] for each1 in coreFiber]
