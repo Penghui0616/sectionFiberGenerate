@@ -83,7 +83,7 @@ coreFiber,coverFiber,barFiber=polygonSection(outSideNode, outSideEle, coverThick
 ```
 
 ## PolygenThreeHole section fiber generate
-<img src="https://github.com/Junjun1guo/sectionFiberGenerate/raw/master/polygonThrewHoles.png" width =40% height =40% div align="center">
+<img src="https://github.com/Junjun1guo/sectionFiberGenerate/raw/branch-cythonVersion/polygonThrewHoles.png" width =40% height =40% div align="center">
 
 ```python
 from sectionFiberMain import circleSection,polygonSection
