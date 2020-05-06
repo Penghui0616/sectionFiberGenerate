@@ -6,13 +6,13 @@ Generate sectional fibers based on python programming
 ```python
 from sectionFiberMain import circleSection,polygonSection
 outD=2  # the diameter of the outside circle
-    coverThick=0.1  # the thinckness of the cover concrete
-    outbarD=0.03  # outside bar diameter
-    outbarDist=0.15  # outside bar space
-    coreSize=0.2  # the size of core concrete fiber
-    coverSize=0.2  # the size of cover concrete fiber
-    plotState=False  # plot the fiber or not plot=True or False
-    corFiber,coverFiber,barFiber=circleSection(outD, coverThick, outbarD, outbarDist, coreSize, coverSize,plotState)
+coverThick=0.1  # the thinckness of the cover concrete
+outbarD=0.03  # outside bar diameter
+outbarDist=0.15  # outside bar space
+coreSize=0.2  # the size of core concrete fiber
+coverSize=0.2  # the size of cover concrete fiber
+plotState=False  # plot the fiber or not plot=True or False
+corFiber,coverFiber,barFiber=circleSection(outD, coverThick, outbarD, outbarDist, coreSize, coverSize,plotState)
 ```
 
 ##  CircleHole section fiber generate
