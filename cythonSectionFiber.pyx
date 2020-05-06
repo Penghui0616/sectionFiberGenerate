@@ -19,7 +19,7 @@ from libc.math cimport sqrt,pi,sin,cos
 @cython.boundscheck(False)
 @cython.wraparound(False)
 ######################################################################################
-cdef class CircleSection:
+class CircleSection():
     """
     Circle section fibers generate
     Input:ax-axes
@@ -66,8 +66,7 @@ cdef class CircleSection:
     plt.show()
     """
     ####################################################
-    cdef double coverThick,outDiameter,innerDiameter
-    def __cinit__(self, coverThick, outDiameter, innerDiameter=None):
+    def __init__(self, coverThick, outDiameter, innerDiameter=None):
         """
         Initialize the class
         """
@@ -94,7 +93,7 @@ cdef class CircleSection:
             yListPlot.append(inyList)
         return xListPlot,yListPlot
     ####################################################
-    cdef list _triEleInfo(self,np.ndarray points, np.ndarray triangles):
+    def _triEleInfo(self,np.ndarray points, np.ndarray triangles):
         """
         Calculate the area and the centroid coordinates of triangle element
         Input:points-vertex of triangel element[[x1,y1,Z1],[x2,y2,Z2]]
@@ -145,7 +144,7 @@ cdef class CircleSection:
         return coreFiberInfo,points,triangles
 
     ####################################################
-    cdef _coverDivide(self, double coverSize, str pos="out"):
+    def _coverDivide(self, double coverSize, str pos="out"):
         """
         Cover concrete fiber generate
         coverSize-fiber size
@@ -236,7 +235,7 @@ cdef class CircleSection:
                 yListPlot.append(yList)
         return coverFiberInfo,xListPLot,yListPlot,xBorderPlot,yBorderPlot
     ####################################################
-    cdef _barDivide(self, double barD, double barDist, str pos="out"):
+    def _barDivide(self, double barD, double barDist, str pos="out"):
         """
         Bar fiber divide
         Input:barD-bar diameter (m)
@@ -285,7 +284,7 @@ cdef class CircleSection:
         return barFiberInfo,barXListPlot,barYListPlot
 ########################################################################################################################
 ########################################################################################################################
-cdef class PolygonSection:
+class PolygonSection():
     """
 	Polygon section fiber mesh (bar, core conrete and cover concrete)
 	###########################---Polygon section example---######################################
@@ -373,9 +372,7 @@ cdef class PolygonSection:
     barFiber = sectInstance.barMesh(outBarD, outBarDist,coverThick, inBarD, inBarDist)
     plt.show()
     """
-    cdef dict outNode,outEle,outNewNodeDict
-    cdef list inNode,inEle,inNewNodeDict
-    def __cinit__(self,outNode, outEle, inNode=None, inEle=None):
+    def __init__(self,outNode, outEle, inNode=None, inEle=None):
         """
         Initialize
         ax:axes
@@ -396,17 +393,16 @@ cdef class PolygonSection:
         Plot the original section
         """
         cdef int i1
-        cdef int NumNode=len(self.inNode)
         returnList=[]
         outLineList = self._lineNodeList(self.outNode, self.outEle)
         returnList=outLineList
         if self.inNode != None:
-            for i1 in range(NumNode):
+            for i1 in range(len(self.inNode)):
                 innerLineList=self._lineNodeList(self.inNode[i1], self.inEle[i1])
                 returnList=returnList+innerLineList
         return returnList
     ####################################################
-    cdef list _lineNodeList(self, dict nodeDict, dict eleDict):
+    def _lineNodeList(self, dict nodeDict, dict eleDict):
         cdef:
             int nEle = len(eleDict)
             int i1,nodeI,nodeJ
@@ -447,12 +443,11 @@ cdef class PolygonSection:
             innerList:border line intersect points coordinates [[(x1,y1),(x2,y2),...,(xn,yn)],...,]
         """
         cdef int each1
-        cdef int inNodeNum=len(self.inNode)
         if self.inNode != None:
             innerList = []
             innerListDict = []
             inlineList=[]
-            for each1 in range(inNodeNum):
+            for each1 in range(len(self.inNode)):
                 returnNodeList = self._middleLineNode(self.inNode[each1],coverThick,pos="innerLine")
                 innerList.append(returnNodeList)
                 innerListDict.append({(j1 + 1): returnNodeList[j1] for j1 in range(len(returnNodeList))})
@@ -463,7 +458,7 @@ cdef class PolygonSection:
             self.inNewNodeDict = innerListDict
             return innerList,inlineList
     ####################################################
-    cdef list _pointToLineD(self,double a,double b,double c,double nodeIx,double nodeIy,double nodeJx,double nodeJy):
+    def _pointToLineD(self,double a,double b,double c,double nodeIx,double nodeIy,double nodeJx,double nodeJy):
         cdef double a1,b1,c1
         cdef double c22
         cdef double a2,b2,c2
@@ -481,7 +476,7 @@ cdef class PolygonSection:
         newNode = list(solve(A, B))
         return newNode
     ####################################################
-    cdef list _interNodeCoord(self,dict nodeDict,double coverThick,str pos):
+    def _interNodeCoord(self,dict nodeDict,double coverThick,str pos):
         cdef list closedNodeValues
         cdef list NodeKeys
         cdef IterNode=[]
@@ -548,7 +543,7 @@ cdef class PolygonSection:
         del NodeList[-1]
         return NodeList
     ####################################################
-    cdef list _middleLineNode(self, dict nodeDict,double coverThick,str pos="outLine"):
+    def _middleLineNode(self, dict nodeDict,double coverThick,str pos="outLine"):
         cdef list newNodeList
         newNodeList=self._interNodeCoord(nodeDict, coverThick, pos)
         return newNodeList
@@ -707,7 +702,7 @@ cdef class PolygonSection:
                 innerIn.append(innerIn[0])
                 outNodeReturn=outNodeReturn+innerOut
                 inNodeReturn=inNodeReturn+innerIn
-            return coverFiberInfo,outNodeReturn,inNodeReturn
+        return coverFiberInfo,outNodeReturn,inNodeReturn
     ####################################################
     def _outBarLineNode(self,barToEdgeDist):
         returnNodeList = self._middleLineNode(self.outNode, barToEdgeDist, pos="outLine")

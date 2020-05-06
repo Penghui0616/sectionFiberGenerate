@@ -67,29 +67,31 @@ class CircleSection():
     plt.show()
     """
     ####################################################
-    def __init__(self, ax, d0, outD, inD=None):
+    def __init__(self, coverThick, outDiameter, innerDiameter=None):
         """
         Initialize the class
         """
-        self.ax = ax
-        self.coverThick = d0
-        self.outDiameter = outD
-        self.innerDiameter = inD
-
+        self.coverThick = coverThick
+        self.outDiameter = outDiameter
+        self.innerDiameter = innerDiameter
     ####################################################
     def initSectionPlot(self):
         """
         Plot the original section
         """
+        xListPlot = []
+        yListPlot = []
         theta = np.arange(0, 2 * np.pi, 0.01)
         outxList = (self.outDiameter / 2.0) * np.cos(theta)
         outyList = (self.outDiameter / 2.0) * np.sin(theta)
-        self.ax.plot(outxList, outyList, "r", linewidth=1, zorder=2)
+        xListPlot.append(outxList)
+        yListPlot.append(outyList)
         if self.innerDiameter != None:
             inxList = (self.innerDiameter / 2.0) * np.cos(theta)
             inyList = (self.innerDiameter / 2.0) * np.sin(theta)
-            self.ax.plot(inxList, inyList, "r", linewidth=1, zorder=2)
-
+            xListPlot.append(inxList)
+            yListPlot.append(inyList)
+        return xListPlot,yListPlot
     ####################################################
     def _triEleInfo(self,points, triangles):
         """
@@ -113,7 +115,6 @@ class CircleSection():
             yc = (y1 + y2 + y3) / 3.0
             inFoList.append((xc, yc, area))
         return inFoList
-
     ####################################################
     def coreMesh(self,eleSize):
         """
@@ -132,7 +133,6 @@ class CircleSection():
             points=mesh.points
             triangles=mesh.cells["triangle"]
             coreFiberInfo = self._triEleInfo(points, triangles)
-            self.ax.triplot(points[:, 0], points[:, 1], triangles)
         else:
             geom = pygmsh.opencascade.Geometry()
             disk = geom.add_disk([0.0, 0.0, 0.0], outDiameterNew / 2.0, radius1=None, char_length=eleSize)
@@ -140,9 +140,7 @@ class CircleSection():
             points = mesh.points
             triangles = mesh.cells["triangle"]
             coreFiberInfo = self._triEleInfo(points, triangles)
-            self.ax.triplot(points[:, 0], points[:, 1], triangles)
-        return coreFiberInfo
-
+        return coreFiberInfo,points,triangles
     ####################################################
     def _coverDivide(self, coverSize, pos="out"):
         """
@@ -182,7 +180,6 @@ class CircleSection():
         FiberYList = [FiberRadius * np.sin((2 * i4 - 1) * 0.5 * fiberAngle) for i4 in range(1, fiberNCover + 1)]
         coverFiberInfo = [(xc, yc, coverArea) for xc, yc in zip(FiberXList, FiberYList)]
         return coverFiberInfo, FiberXList, FiberYList, NodeList, NewNodeList
-
     ####################################################
 
     def coverMesh(self, coverSize):
@@ -194,34 +191,39 @@ class CircleSection():
             coverFiberInfo: cover fiber information [(xc1,yc1,area1),(xc2,yc2,area2)]
         """
         coverFiberInfo = None
+        xListPLot = []
+        yListPlot = []
+        xBorderPlot = []
+        yBorderPlot = []
         outCoverFiberInfo, outFiberXList, outFiberYList, outNodeList, \
             outNewNodeList = self._coverDivide(coverSize,pos="out")
         coverFiberInfo = outCoverFiberInfo
-        outDNew = self.outDiameter - 2.0 * self.coverThick
-        theta = np.arange(0, 2 * np.pi, 0.01)
-        outThetaX = (outDNew / 2.0) * np.cos(theta)
-        outThetaY = (outDNew / 2.0) * np.sin(theta)
-        self.ax.plot(outThetaX, outThetaY, "r", linewidth=1, zorder=2)
+        borderOutNodeList = outNewNodeList
+        borderOutNodeList.append(outNewNodeList[0])
+        xBorderPlot.append([each1[0] for each1 in borderOutNodeList])
+        yBorderPlot.append([each2[1] for each2 in borderOutNodeList])
         # self.ax.scatter(outFiberXList,outFiberYList,s=10,c="k",zorder = 2)
         for i5 in range(len(outNodeList)):
             xList = [outNodeList[i5][0], outNewNodeList[i5][0]]
             yList = [outNodeList[i5][1], outNewNodeList[i5][1]]
-            self.ax.plot(xList, yList, "r", linewidth=1, zorder=2)
+            xListPLot.append(xList)
+            yListPlot.append(yList)
         if self.innerDiameter != None:
             inDNew = self.innerDiameter + 2.0 * self.coverThick
             inCoverFiberInfo, inFiberXList, inFiberYList, inNodeList, inNewNodeList \
                 = self._coverDivide(coverSize, pos="in")
             coverFiberInfo = coverFiberInfo + inCoverFiberInfo
-            inThetaX = (inDNew / 2.0) * np.cos(theta)
-            inThetaY = (inDNew / 2.0) * np.sin(theta)
-            self.ax.plot(inThetaX, inThetaY, "r", linewidth=1, zorder=2)
+            borderInNodeList = inNewNodeList
+            borderInNodeList.append(inNewNodeList[0])
+            xBorderPlot.append([each3[0] for each3 in borderInNodeList])
+            yBorderPlot.append([each4[1] for each4 in borderInNodeList])
             # self.ax.scatter(inFiberXList,inFiberYList,s=10,c="k",zorder = 2)
             for i5 in range(len(inNodeList)):
                 xList = [inNodeList[i5][0], inNewNodeList[i5][0]]
                 yList = [inNodeList[i5][1], inNewNodeList[i5][1]]
-                self.ax.plot(xList, yList, "r", linewidth=1, zorder=2)
-        return coverFiberInfo
-
+                xListPLot.append(xList)
+                yListPlot.append(yList)
+        return coverFiberInfo,xListPLot,yListPlot,xBorderPlot,yBorderPlot
     ####################################################
     def _barDivide(self, barD, barDist, pos="out"):
         """
@@ -255,14 +257,18 @@ class CircleSection():
             barFiberInfo:bar fiber infomation [(xc1,yc1,area1),(xc2,yc2,area2)]
         """
         barFiberInfo = None
+        barXListPlot = []
+        barYListPlot = []
         outFiberInfo, outFiberXList, outFiberYList = self._barDivide(outBarD, outBarDist, pos="out")
         barFiberInfo = outFiberInfo
-        self.ax.scatter(outFiberXList, outFiberYList, s=10, c="k", zorder=3)
+        barXListPlot.append(outFiberXList)
+        barYListPlot.append(outFiberYList)
         if self.innerDiameter != None:
             inFiberInfo, inFiberXList, inFiberYList = self._barDivide(inBarD, inBarDist, pos="in")
             barFiberInfo = barFiberInfo + inFiberInfo
-            self.ax.scatter(inFiberXList, inFiberYList, s=10, c="k", zorder=3)
-        return barFiberInfo
+            barXListPlot.append(inFiberXList)
+            barYListPlot.append(inFiberYList)
+        return barFiberInfo,barXListPlot,barYListPlot
 ########################################################################################################################
 ########################################################################################################################
 class PolygonSection():
@@ -354,7 +360,7 @@ class PolygonSection():
     plt.show()
     """
 
-    def __init__(self, ax, outNode, outEle, inNode=None, inEle=None):
+    def __init__(self, outNode, outEle, inNode=None, inEle=None):
         """
         Initialize:
         ax: axes
@@ -367,28 +373,21 @@ class PolygonSection():
         self.outEle = outEle
         self.inNode = inNode
         self.inEle = inEle
-        self.ax = ax
         self.outNewNodeDict = None  # 新生成的外侧保护层混凝土线节点字典
         self.inNewNodeDict = None  # 新生成的内侧保护层混凝土线节点字典列表
-        self.lineWid = 1  # 线宽
-        self.coverColor = "r"  # 保护层线颜色
-        self.coreColor = "b"  # 核心混凝土颜色
-        self.barColor = "k"  # 纵筋颜色
-        self.barMarkSize = 15  # 散点大小
-
     ####################################################
     def sectPlot(self):
         """
         Plot the original section
         """
+        returnList = []
         outLineList = self._lineNodeList(self.outNode, self.outEle) #返回每个线单元两端节点的X，Y坐标列表[([x1,x2],[y1,y2])]
-        for each1 in outLineList:
-            self.ax.plot(each1[0], each1[1], self.coverColor, self.lineWid, zorder=0)
+        returnList = outLineList
         if self.inNode != None:
             for eachNode, eachEle in zip(self.inNode, self.inEle):
                 innerLineList= self._lineNodeList(eachNode, eachEle)#返回每个线单元两端节点的X，Y坐标列表[([x1,x2],[y1,y2])]
-                for each2 in innerLineList:
-                    self.ax.plot(each2[0], each2[1], self.coverColor, self.lineWid, zorder=0)
+                returnList = returnList + innerLineList
+        return returnList
     ####################################################
     def _lineNodeList(self, nodeDict, eleDict):
         """
@@ -424,9 +423,7 @@ class PolygonSection():
         outEleDict = self.outEle
         # 返回每个线单元两端节点的X，Y坐标列表[([x1,x2],[y1,y2])]
         coverlineList = self._lineNodeList(outNodeNewDict, outEleDict)
-        for each2 in coverlineList:
-            self.ax.plot(each2[0], each2[1], self.coverColor, self.lineWid, zorder=0)
-        return returnNodeList
+        return returnNodeList,coverlineList
     ####################################################
     def innerLinePlot(self, coverThick):
         """
@@ -439,6 +436,7 @@ class PolygonSection():
         if self.inNode != None:
             innerList = []
             innerListDict = []
+            inlineList = []
             for eachNodeDict, eachEleDict in zip(self.inNode, self.inEle):
                 #计算分界线各节点的列表[(x1,y1),(x2,y2),...,(xn,yn)]
                 returnNodeList = self._middleLineNode(eachNodeDict,coverThick,pos="innerLine")
@@ -447,11 +445,10 @@ class PolygonSection():
                 inNodeDict = {(i1 + 1): returnNodeList[i1] for i1 in range(len(returnNodeList))}
                 inEleDict = eachEleDict
                 #返回每个线单元两端节点的X，Y坐标列表[([x1,x2],[y1,y2])]
-                inlineList = self._lineNodeList(inNodeDict, inEleDict)
-                for each2 in inlineList:
-                    self.ax.plot(each2[0], each2[1], self.coverColor, self.lineWid, zorder=0)
+                tempList = self._lineNodeList(inNodeDict, inEleDict)
+                inlineList = inlineList + tempList
             self.inNewNodeDict = innerListDict
-            return innerList
+            return innerList,inlineList
     ####################################################
     def _pointToLineD(self,a,b,c,nodeIx,nodeIy,nodeJx,nodeJy):
         """
@@ -467,19 +464,6 @@ class PolygonSection():
         B = np.array([-c1, -c2])
         newNode = list(solve(A, B))
         return newNode
-    ####################################################
-    def _pointToLineDist(self,a,b,c,innerPointCoord):
-        """
-        计算点到直线距离
-        ax+by+c=0
-        输入：a,b,c参数
-              innerPointCoord-一点坐标
-        输出：d-点到直线距离
-        """
-        x0=innerPointCoord[0]
-        y0=innerPointCoord[1]
-        d=np.abs((a*x0+b*y0+c))/float(math.sqrt(a**2+b**2))
-        return d
     ####################################################
     def _interNodeCoord(self,nodeDict,coverThick,pos):
         """
@@ -594,7 +578,6 @@ class PolygonSection():
             points = mesh.points
             triangles = mesh.cells["triangle"]
             triEleInfoList = self._triEleInfo(points, triangles)
-            self.ax.triplot(points[:, 0], points[:, 1], triangles,c=self.coreColor,lw=self.lineWid)
         else:
             geom=pygmsh.opencascade.Geometry()
             outPolygon=geom.add_polygon(outNOdeList, lcar=eleSize)
@@ -607,8 +590,7 @@ class PolygonSection():
             points = mesh.points
             triangles = mesh.cells["triangle"]
             triEleInfoList = self._triEleInfo(points, triangles)
-            self.ax.triplot(points[:, 0], points[:, 1], triangles,c=self.coreColor,lw=self.lineWid)
-        return triEleInfoList
+        return triEleInfoList,points,triangles
     ####################################################
     def _coverDivide(self, outNodeDict, inNodeDict, eleDict, eleSize, coverThick):
         """
@@ -683,6 +665,8 @@ class PolygonSection():
         Output:
             coverFiberInfo:cover fiber information [(xc1,yc1,area1),(xc2,yc2,area2)]
         """
+        outNodeReturn = []
+        inNodeReturn = []
         coverFiberInfo = None
         nodeOutDict = self.outNode
         eleOutDict = self.outEle
@@ -696,23 +680,8 @@ class PolygonSection():
         coverFiberInfo = fiberInfo
         outNodeInfo.append(outNodeInfo[0])
         inNodeInfo.append(inNodeInfo[0])
-        xList = []
-        yList = []
-        areaList = []
-        for each1 in fiberInfo:
-            xList.append(each1[0])
-            yList.append(each1[1])
-            areaList.append(each1[2])
-        # self.ax.scatter(xList,yList,s=2,c="r")
-        for i1 in range(len(outNodeInfo) - 1):
-            self.ax.plot([inNodeInfo[i1][0], outNodeInfo[i1][0]], [inNodeInfo[i1][1], outNodeInfo[i1][1]],
-                         self.coverColor,linewidth=self.lineWid, zorder=0)
-        for i2 in range(len(outNodeInfo) - 1):
-            self.ax.plot([inNodeInfo[i2][0], inNodeInfo[i2 + 1][0]], [inNodeInfo[i2][1], inNodeInfo[i2 + 1][1]], \
-                         self.coverColor, linewidth=self.lineWid, zorder=0)
-        for i3 in range(len(outNodeInfo) - 1):
-            self.ax.plot([outNodeInfo[i3][0], outNodeInfo[i3 + 1][0]], [outNodeInfo[i3][1], outNodeInfo[i3 + 1][1]], \
-                         self.coverColor, linewidth=self.lineWid, zorder=0)
+        outNodeReturn = outNodeInfo
+        inNodeReturn = inNodeInfo
         ##内部保护层混凝土的划分
         if self.inNode != None:
             nInhole = len(self.inNode)
@@ -725,21 +694,10 @@ class PolygonSection():
                 coverFiberInfo = coverFiberInfo + Innerfiber
                 innerOut.append(innerOut[0])
                 innerIn.append(innerIn[0])
-                for each2 in Innerfiber:
-                    inxList.append(each2[0])
-                    inyList.append(each2[1])
-                    inareaList.append(each2[2])
-                for i5 in range(len(innerOut) - 1):
-                    self.ax.plot([innerOut[i5][0], innerIn[i5][0]], [innerOut[i5][1], innerIn[i5][1]],\
-                                 self.coverColor, linewidth=self.lineWid, zorder=0)
-                for i6 in range(len(innerOut) - 1):
-                    self.ax.plot([innerIn[i6][0], innerIn[i6 + 1][0]], [innerIn[i6][1], innerIn[i6 + 1][1]], \
-                                 self.coverColor, linewidth=self.lineWid, zorder=0)
-                for i7 in range(len(innerIn) - 1):
-                    self.ax.plot([innerOut[i7][0], innerOut[i7 + 1][0]], [innerOut[i7][1], innerOut[i7 + 1][1]], \
-                                 self.coverColor, linewidth=self.lineWid, zorder=0)
+                outNodeReturn = outNodeReturn + innerOut
+                inNodeReturn = inNodeReturn + innerIn
                 # self.ax.scatter(inxList,inyList,s=2,c="r")
-            return coverFiberInfo
+        return coverFiberInfo,outNodeReturn,inNodeReturn
     ####################################################
     def _outBarLineNode(self,barToEdgeDist):
         """
@@ -824,7 +782,6 @@ class PolygonSection():
         # 外侧钢筋纤维的划分
         outBarFiber, outXList, outYList = self._barDivide(outBarD, outBarDist, outBarLineDict, outBarListEle)
         barFiberInfo = outBarFiber
-        self.ax.scatter(outXList, outYList, s=self.barMarkSize, c=self.barColor, linewidth=self.lineWid, zorder=2)
         #内侧额钢筋纤维的划分
         if self.inNode != None:
             inBarLineDict = self._innerBarLineNode(coverThick+inBarD/2.0) #计算内侧钢筋所在直线交点坐标
@@ -833,8 +790,9 @@ class PolygonSection():
             for i1 in range(nEle):
                 inBarFiber, inXList, inYList = self._barDivide(inBarD, inBarDist, inBarLineDict[i1], inBarLineEle[i1])
                 barFiberInfo = barFiberInfo + inBarFiber
-                self.ax.scatter(inXList, inYList, s=self.barMarkSize, c=self.barColor, linewidth=self.lineWid, zorder=2)
-        return barFiberInfo
+                outXList = outXList + inXList
+                outYList = outYList + inYList
+        return barFiberInfo,outXList,outYList
 ########################################################################################################################
 def figureSize(outSideNode):
     """
@@ -852,27 +810,27 @@ def figureSize(outSideNode):
     return [w,h]
 ########################################################################################################################
 ########################################################################################################################
-if __name__=="__main__":
+# if __name__=="__main__":
     #######################---circle section---#########################################################################
     ####################################################################################################################
 
-    fig = plt.figure(figsize=(5, 5))
-    ax = fig.add_subplot(111)
-    outbarD = 0.03  # 纵向钢筋直径
-    outbarDist = 0.15  # 纵向钢筋间距
-    inBarD = 0.03
-    inBarDist = 0.15
-    coverThick = 0.1  # 保护层混凝土厚度
-    coreEleSize = 0.1  # 核心纤维的大小
-    coverEleSize = 0.15  # 保护层纤维大小
-    outDiameter = 20  # 截面外圆直径
-    innerDiameter = 1 #截面内圆直径
-    circleInstance = CircleSection(ax, coverThick, outDiameter,innerDiameter)
-    circleInstance.initSectionPlot()
-    coreFiber=circleInstance.coreMesh(coreEleSize)
-    coverFiber = circleInstance.coverMesh(coverEleSize)
-    barFiber = circleInstance.barMesh(outbarD, outbarDist,inBarD,inBarDist)
-    plt.show()
+    # fig = plt.figure(figsize=(5, 5))
+    # ax = fig.add_subplot(111)
+    # outbarD = 0.03  # 纵向钢筋直径
+    # outbarDist = 0.15  # 纵向钢筋间距
+    # inBarD = 0.03
+    # inBarDist = 0.15
+    # coverThick = 0.1  # 保护层混凝土厚度
+    # coreEleSize = 0.1  # 核心纤维的大小
+    # coverEleSize = 0.15  # 保护层纤维大小
+    # outDiameter = 20  # 截面外圆直径
+    # innerDiameter = 1 #截面内圆直径
+    # circleInstance = CircleSection(ax, coverThick, outDiameter,innerDiameter)
+    # circleInstance.initSectionPlot()
+    # coreFiber=circleInstance.coreMesh(coreEleSize)
+    # coverFiber = circleInstance.coverMesh(coverEleSize)
+    # barFiber = circleInstance.barMesh(outbarD, outbarDist,inBarD,inBarDist)
+    # plt.show()
 
     # fig1 = plt.figure(figsize=(5, 5))
     # ax1 = fig1.add_subplot(111)
