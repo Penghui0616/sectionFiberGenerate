@@ -75,7 +75,9 @@ def circleSection(outD,coverThick,outbarD,outbarDist,coreSize,coverSize,plot=Fal
     if plot==True:
         outSideNode = {1: (-outD,-outD), 2: (outD,outD)}
         w, h = figureSize(outSideNode)
-        fig = plt.figure(figsize=(w, h))
+        high = 5
+        wid = w / float(h) * high
+        fig = plt.figure(figsize=(wid, high))
         ax = fig.add_subplot(111)
         for eachx, eachy in zip(xListPlot, yListPlot):
             ax.plot(eachx, eachy, "r", linewidth=1, zorder=2)
@@ -204,7 +206,12 @@ def polygonSection(outSideNode,outSideEle,coverThick,coreSize,coverSize,outBarD,
         barFiber, barXListPlot, barYListPlot = sectInstance.barMesh(outBarD, outBarDist, coverThick, inBarD, inBarDist)
     if inSideNode==None and plot==True:
         w, h = figureSize(outSideNode)
-        fig = plt.figure(figsize=(w, h))
+        maxValue=max(w,h)
+        high=7
+        ratioValue=high/float(maxValue)
+        wid=w*ratioValue
+        high=h*ratioValue
+        fig = plt.figure(figsize=(wid, high))
         ax = fig.add_subplot(111)
         coverColor = "r"
         coreColor = "b"
@@ -226,7 +233,12 @@ def polygonSection(outSideNode,outSideEle,coverThick,coreSize,coverSize,outBarD,
         plt.show()
     elif inSideNode!=None and plot==True:
         w, h = figureSize(outSideNode)
-        fig = plt.figure(figsize=(w, h))
+        maxValue = max(w, h)
+        high = 7
+        ratioValue = high / float(maxValue)
+        wid = w * ratioValue
+        high = h * ratioValue
+        fig = plt.figure(figsize=(wid, high))
         ax = fig.add_subplot(111)
         coverColor = "r"
         coreColor = "b"
