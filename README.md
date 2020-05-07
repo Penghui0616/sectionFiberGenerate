@@ -3,7 +3,7 @@ Generate sectional fibers based on python programming
 ## Install    [the package in PyPI](https://pypi.org/project/sectionFiberDivide/)
 pip install sectionFiberDivide  
 
-After installation through python script, then download gmsh that satifies your operation system. And copy gmsh.exe to your working directory. 
+After installation through python script, then download gmsh ([download gmsh](https://gmsh.info/))that satifies your operation system. And copy gmsh.exe to your working directory. 
 
 The followings are some basic examples, you can also obtain these examples using help(circleSection) and help(polygonSection).
 
