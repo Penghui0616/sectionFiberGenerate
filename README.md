@@ -3,7 +3,7 @@ Generate sectional fibers based on python programming
 ## Install    [the package in PyPI](https://pypi.org/project/sectionFiberDivide/)
 pip install sectionFiberDivide  
 
-After installation through python script, then download gmsh ([download gmsh](https://gmsh.info/))that satifies your operation system. And copy gmsh.exe to your working directory. 
+After installation through python script, then download gmsh ([download gmsh](https://gmsh.info/)) that satifies your operation system. And copy gmsh.exe to your working directory. 
 
 The followings are some basic examples, you can also obtain these examples using help(circleSection) and help(polygonSection).
 
@@ -12,7 +12,7 @@ The followings are some basic examples, you can also obtain these examples using
 <img src="https://github.com/Junjun1guo/sectionFiberGenerate/raw/master/circle.png" width =40% height =40% div align="center">
 
 ```python
-from sectionFiberMain import circleSection,polygonSection
+from sectionFiberDivide import circleSection
 outD=2  # the diameter of the outside circle
 coverThick=0.1  # the thinckness of the cover concrete
 outbarD=0.03  # outside bar diameter
@@ -27,7 +27,7 @@ corFiber,coverFiber,barFiber=circleSection(outD, coverThick, outbarD, outbarDist
 <img src="https://github.com/Junjun1guo/sectionFiberGenerate/raw/master/circleHole.png" width =40% height =40% div align="center">
 
 ```python
-from sectionFiberMain import circleSection,polygonSection
+from sectionFiberDivide import circleSection
 outD = 2  # the diameter of the outside circle
 coverThick = 0.06  # the thinckness of the cover concrete
 outbarD = 0.03  # outside bar diameter
@@ -46,7 +46,7 @@ corFiber, coverFiber, barFiber = circleSection(outD, coverThick, outbarD, outbar
 <img src="https://github.com/Junjun1guo/sectionFiberGenerate/raw/master/polygen.png" width =40% height =40% div align="center">
 
 ```python
-from sectionFiberMain import circleSection,polygonSection
+from sectionFiberDivide import polygonSection
 # the outside vertexes consecutively numbering and coordinate values in local y-z plane in dict container
 outSideNode = {1: (3.5, 3), 2: (1.5, 5), 3: (-1.5, 5), 4: (-3.5, 3), 5: (-3.5, -3), 6: (-1.5, -5), 7: (1.5, -5),
                    8: (3.5, -3)}
@@ -66,7 +66,7 @@ coreFiber,coverFiber,barFiber=polygonSection(outSideNode, outSideEle, coverThick
 <img src="https://github.com/Junjun1guo/sectionFiberGenerate/raw/master/polygenOneHole.png" width =40% height =40% div align="center">
 
 ```python
-from sectionFiberMain import circleSection,polygonSection
+from sectionFiberDivide import polygonSection
 # the outside vertexes consecutively numbering and coordinate values in local y-z plane in dict container
 outSideNode = {1: (3.5, 3), 2: (1.5, 5), 3: (-1.5, 5), 4: (-3.5, 3), 5: (-3.5, -3), 6: (-1.5, -5), 7: (1.5, -5),
                    8: (3.5, -3)}
@@ -94,7 +94,7 @@ coreFiber,coverFiber,barFiber=polygonSection(outSideNode, outSideEle, coverThick
 <img src="https://github.com/Junjun1guo/sectionFiberGenerate/raw/branch-cythonVersion/polygonThrewHoles.jpg" width =40% height =40% div align="center">
 
 ```python
-from sectionFiberMain import circleSection,polygonSection
+from sectionFiberDivide import polygonSection
 outSideNode = {1: (0, 0), 2: (7, 0), 3: (7,3), 4: (0, 3)}
 # the outside vertexes loop consecutively numbering in dict container
 outSideEle = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4,1)}
