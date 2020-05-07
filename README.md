@@ -2,6 +2,8 @@ Generate sectional fibers based on python programming
 
 ## Install
 pip install sectionFiberDivide
+After installation through python script, then download gmsh that satifies your operation system. And copy gmsh.ext to your working directory. 
+The followings are some basic examples, you can also obtain these examples using help(circleSection) and help(polygonSection).
 
 ## Circle section fiber generate
 
