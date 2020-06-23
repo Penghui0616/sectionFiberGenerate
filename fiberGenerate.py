@@ -700,7 +700,7 @@ class PolygonSection():
 		self.ax.scatter(outXList2, outYList2, s=self.barMarkSize, c=self.barColor, linewidth=self.lineWid, zorder=2)
 		barFiberInfo = barFiberInfo1 + barFiberInfo2
 
-		if self.inNode != None:
+		if inBarD != None:
 			inBarLineDict = self._innerBarLineDict(d0+inBarD/2)
 			inBarLineEle = self.inEle
 			nEle=len(inBarLineEle)
