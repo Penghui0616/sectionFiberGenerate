@@ -143,7 +143,7 @@ coverSize = 0.2  # the size of the cover concrete fiber elements
 inBarDist = 0.14 # inside bar space
 inBarD = 0.025 # inside bar diameter
 
-#outside bar arrangement information 1
+#外层钢筋分布信息1
 outBarD1 = 0.036 # outside bar diameter
 outBarDist1 = 0.14 # outside bar space
 outBarNodeDict1 = {1: (2.975, 1.516), 2: (2.475, 1.516), 3: (2.475, 2.016), 4: (-2.475, 2.016), 5: (-2.475, 1.516),
@@ -151,7 +151,7 @@ outBarNodeDict1 = {1: (2.975, 1.516), 2: (2.475, 1.516), 3: (2.475, 2.016), 4: (
                    11: (2.475, -1.516), 12: (2.975, -1.516)}
 outBarEleDict1 = {1: (1, 2), 2: (2, 3), 3: (3, 4), 4: (4, 5), 5: (6, 5), 6: (5, 2), 7: (7, 8), 8: (8, 9), 9: (9, 10),
                   10: (10, 11), 11: (12, 11), 12: (11, 8)}
-#outside bar arrangement information 2
+#外层钢筋分布信息2
 outBarD2 = 0.04 # outside bar diameter
 outBarDist2 = 0.14 # outside bar space
 outBarNodeDict2 = {1: (2.975, 1.33), 2: (2.975, -1.47), 3: (2.475, 1.33), 4: (2.475, -1.47), 5: (-2.475, 1.33),
