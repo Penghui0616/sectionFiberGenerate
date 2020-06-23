@@ -74,13 +74,6 @@ def MCAnalysis(section, direction):
 	barYieldMoment=sectMoment[barYieldIndex]
 	#print(barYieldMoment,barYieldCurvature)
 
-	#寻找截面弯矩达到最大点
-	sectCurvature=momentCurvature[:,1]
-	momentMaxMoment = max(sectMoment)
-	momentMaxIndex = np.where(sectMoment == momentMaxMoment)
-	momentMaxCurvature = sectCurvature[momentMaxIndex][0]
-	#print(momentMaxMoment,momentMaxCurvature)
-
 	#寻找核心混凝土压溃或者纵筋达到极限应变的点
 	barCrackIndex = len(sectMoment)-1
 	esu = 0.10
@@ -126,9 +119,11 @@ def MCAnalysis(section, direction):
 	ultimateCurvature = sectCurvature[crackIndex]
 	#print(ultimateMoment,ultimateCurvature)
 
-	if momentMaxCurvature >= ultimateCurvature:
-		momentMaxMoment = ultimateMoment
-		momentMaxCurvature = ultimateCurvature
+	#寻找截面弯矩达到最大点
+	momentMaxMoment = max(sectMoment[:crackIndex])
+	momentMaxIndex = np.where(sectMoment == momentMaxMoment)
+	momentMaxCurvature = sectCurvature[momentMaxIndex][0]
+	#print(momentMaxMoment,momentMaxCurvature)
 
 
 	#计算等效屈服弯矩和曲率
