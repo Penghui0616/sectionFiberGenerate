@@ -117,13 +117,13 @@ def MCAnalysis(section, direction):
 
 	ultimateMoment = sectMoment[crackIndex]
 	ultimateCurvature = sectCurvature[crackIndex]
-	#print(ultimateMoment,ultimateCurvature)
+	print(ultimateMoment,ultimateCurvature)
 
 	#寻找截面弯矩达到最大点
 	momentMaxMoment = max(sectMoment[:crackIndex])
-	momentMaxIndex = np.where(sectMoment == momentMaxMoment)
-	momentMaxCurvature = sectCurvature[momentMaxIndex][0]
-	#print(momentMaxMoment,momentMaxCurvature)
+	momentMaxIndex = np.where(sectMoment[:crackIndex] == momentMaxMoment)
+	momentMaxCurvature = sectCurvature[:crackIndex][momentMaxIndex][0]
+	print(momentMaxMoment,momentMaxCurvature)
 
 
 	#计算等效屈服弯矩和曲率
